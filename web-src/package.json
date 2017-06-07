@@ -5,7 +5,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build --base-href=/sword --output-path=../src/main/webapp/ng/",
+    "build": "ng build --base-href=./sample --output-path=../app/src/main/webapp/ng/",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"

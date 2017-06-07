@@ -7,6 +7,11 @@
 #
 
 #
+# Remove any old stuff
+#
+rm -rf server/content/ server/tmp/ server/deployments 
+
+#
 # Make a deployment directory 
 #
 mkdir -p server/deployments

@@ -109,7 +109,7 @@
                         <goals>
                            <goal>exec</goal>
                         </goals>
-                        <phase>package</phase>
+                        <phase>compile</phase>
                         <configuration>
                            <workingDirectory>${project.basedir}/../web-src/</workingDirectory>
                            <executable>npm</executable>

@@ -22,3 +22,6 @@ server/log
 server/content
 server/data
 server/tmp
+
+#assets
+assets/source/

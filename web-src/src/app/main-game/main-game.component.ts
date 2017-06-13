@@ -14,8 +14,10 @@ export class MainGameComponent implements OnInit {
   //camera: THREE.PerspectiveCamera;
   camera: CameraComponent;
   renderer: THREE.WebGLRenderer;
+  mainTag: string;
 
   constructor() {
+    this.mainTag = "mainGame";
   }
 
   ngOnInit() {
@@ -40,7 +42,10 @@ export class MainGameComponent implements OnInit {
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    document.getElementById("mainGame").appendChild(this.renderer.domElement);
+  
+    document.getElementById(this.mainTag).appendChild(this.renderer.domElement);
+
+    document.getElementById(this.mainTag).focus();
 
   }
 
@@ -50,6 +55,14 @@ export class MainGameComponent implements OnInit {
 
   move(mouse: MouseEvent): void {    
     this.camera.move(mouse);
+  }
+
+  keyUp(key: KeyboardEvent): void {    
+    this.camera.keyUp(key);
+  }
+
+  keyDown(key: KeyboardEvent): void {    
+    this.camera.keyDown(key);
   }
 
   public render() {

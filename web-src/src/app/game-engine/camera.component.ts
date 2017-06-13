@@ -8,6 +8,7 @@ export class CameraComponent implements OnInit {
   private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
   private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
   private readonly Scale: number = .05;
+  private readonly MoveScale: number = 5;
   private readonly TwoPi: number = Math.PI * 2.0;
 
   private position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
@@ -19,7 +20,7 @@ export class CameraComponent implements OnInit {
     var position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
     var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
     var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-    var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0); 
+    var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
     this.lookatForCamera(right, up, look, position);
   }
 
@@ -56,13 +57,72 @@ export class CameraComponent implements OnInit {
 
   move(mouse: MouseEvent): void {
 
-    var deltaX = (this.lastPosition.x - mouse.x) * this.Scale;
-    var deltaY = (this.lastPosition.y - mouse.y) * this.Scale;
+    if (mouse.buttons === 1) {
+      var deltaX = (this.lastPosition.x - mouse.x) * this.Scale;
+      var deltaY = (this.lastPosition.y - mouse.y) * this.Scale;
 
-    this.angle.x += deltaX * this.Scale;
-    this.angle.y += deltaY * this.Scale;
+      this.angle.x += deltaX * this.Scale;
+      this.angle.y += deltaY * this.Scale;
 
-    console.log("angle: " + this.angle.x + ", " + this.angle.y);
+      this.updateCamera();
+    }
+    this.lastPosition.x = mouse.x;
+    this.lastPosition.y = mouse.y;
+
+  }
+
+  keyDown(key: KeyboardEvent): void {
+    var direction: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+    switch (key.keyCode) {
+      case 87: //W       
+        direction.add(new THREE.Vector3(0, 0, -1));
+        break;
+      case 65: //A
+        direction.add(new THREE.Vector3(-1, 0, 0));
+        break;
+      case 68: //D
+        direction.add(new THREE.Vector3(1, 0, 0));
+        break;
+      case 83: //S
+        direction.add(new THREE.Vector3(0, 0, 1));
+        break;
+      case 69: //E
+        direction.add(new THREE.Vector3(0, 1, 0));
+        break;
+      case 88: //X
+        direction.add(new THREE.Vector3(0, -1, 0));
+        break;
+    }
+
+    if (direction.length() > 0) {
+      direction.multiplyScalar(this.MoveScale);
+      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+      var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+      var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+
+      this.camera.matrix.extractBasis(right, up, look);
+
+      look.multiplyScalar(direction.z);
+      up.multiplyScalar(direction.y);
+      right.multiplyScalar(direction.x);
+
+      this.position.add(right).add(up).add(look);
+
+      this.updateCamera();
+    }
+
+    //console.log("Down key.char: " + key.keyCode);
+  }
+
+  keyUp(key: KeyboardEvent): void {
+    console.log("Up  key.char: " + key.keyCode);
+  }
+
+  private updateCamera(): void {
+
+    //console.log("angle: " + this.angle.x + ", " + this.angle.y);
     if (this.angle.x > this.TwoPi)
       this.angle.x += -this.TwoPi;
 
@@ -73,7 +133,7 @@ export class CameraComponent implements OnInit {
       this.angle.y += -this.TwoPi;
 
     if (this.angle.y < -this.TwoPi)
-      this.angle.y += this.TwoPi;    
+      this.angle.y += this.TwoPi;
 
     var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
     var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
@@ -87,14 +147,11 @@ export class CameraComponent implements OnInit {
     up.normalize();
 
     look.crossVectors(right, up);
-    look.normalize();    
+    look.normalize();
 
     this.lookatForCamera(right, up, look, this.position);
-
-    this.lastPosition.x = mouse.x;
-    this.lastPosition.y = mouse.y;
-
   }
+
   ngOnInit() {
 
   }

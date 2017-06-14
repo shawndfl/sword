@@ -4,11 +4,11 @@ import { CameraComponent } from '../game-engine/camera.component'
 import * as THREE from 'three';
 
 @Component({
-  selector: 'app-scn-cube',
-  templateUrl: './scn-cube.component.html',
-  styleUrls: ['./scn-cube.component.css']
+  selector: 'app-scn-loader',
+  templateUrl: './scn-loader.component.html',
+  styleUrls: ['./scn-loader.component.css']
 })
-export class ScnCubeComponent implements OnInit {
+export class ScnLoaderComponent {
 
   scene: THREE.Scene;
   camera: CameraComponent;
@@ -30,7 +30,7 @@ export class ScnCubeComponent implements OnInit {
     this.camera = new CameraComponent();
 
     var geometry = new THREE.BoxGeometry(20, 20, 20);
-    var material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false });
+    var material = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: false });
 
     var mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = 10;

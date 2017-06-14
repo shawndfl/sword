@@ -6,12 +6,14 @@ import { HttpModule } from '@angular/http';
 import { AppComponent } from './app.component';
 import { MainGameComponent } from './main-game/main-game.component';
 import { ScnCubeComponent } from './scn-cube/scn-cube.component';
+import { ScnLoaderComponent } from './scn-loader/scn-loader.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     MainGameComponent,
-    ScnCubeComponent
+    ScnCubeComponent,
+    ScnLoaderComponent
   ],
   imports: [
     BrowserModule,

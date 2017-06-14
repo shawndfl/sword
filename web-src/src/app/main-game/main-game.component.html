@@ -1,3 +1,10 @@
-<div id="mainGame" (mouseover)="over($event)" (mousemove)="move($event)" (keyup)="keyUp($event)" (keydown)="keyDown($event)" tabindex="0">
-  Mouse events on this
+<div>
+  <label for="scene">Scene</label>
+  <select id="scene" [formControl]="scene">
+    <option value="none">none</option>   
+    <option value="cube">cube</option>
+  </select>
+  <ng-container *ngIf="selected =='cube'">
+    <app-scn-cube></app-scn-cube>
+  </ng-container>
 </div>

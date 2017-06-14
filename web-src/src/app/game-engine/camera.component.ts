@@ -15,7 +15,7 @@ export class CameraComponent implements OnInit {
 
   constructor() {
 
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
 
     var position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
     var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
@@ -117,7 +117,7 @@ export class CameraComponent implements OnInit {
   }
 
   keyUp(key: KeyboardEvent): void {
-    console.log("Up  key.char: " + key.keyCode);
+    //console.log("Up  key.char: " + key.keyCode);
   }
 
   private updateCamera(): void {

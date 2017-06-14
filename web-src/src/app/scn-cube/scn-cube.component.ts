@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component'
 
 import * as THREE from 'three';
@@ -10,7 +10,7 @@ import * as THREE from 'three';
 })
 export class ScnCubeComponent implements OnInit {
 
-  scene: THREE.Scene;  
+  scene: THREE.Scene;
   camera: CameraComponent;
   renderer: THREE.WebGLRenderer;
   mainTag: string;
@@ -27,7 +27,7 @@ export class ScnCubeComponent implements OnInit {
   public init() {
 
     this.scene = new THREE.Scene();
-    this.camera = new CameraComponent();  
+    this.camera = new CameraComponent();
 
     var geometry = new THREE.BoxGeometry(20, 20, 20);
     var material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false });
@@ -49,22 +49,37 @@ export class ScnCubeComponent implements OnInit {
     gridHelper.position.y = 0;
     gridHelper.position.x = 0;
     this.scene.add(gridHelper);
+
+    document.addEventListener('mousedown', () => this.onMouseOver, false);
+    document.addEventListener('mouseMove', this.onMouseMove, false);
+    //document.addEventListener('touchmove', onDocumentTouchMove, false);    
   }
 
-  over(mouse: MouseEvent): void {
+  @HostListener('window:mouseover', ['$event'])
+  onMouseOver(mouse: MouseEvent): void {
     this.camera.over(mouse);
   }
 
-  move(mouse: MouseEvent): void {
+  @HostListener('window:mousemove', ['$event'])
+  onMouseMove(mouse: MouseEvent): void {
     this.camera.move(mouse);
   }
 
-  keyUp(key: KeyboardEvent): void {
+  @HostListener('window:keyup', ['$event'])
+  onKeyUp(key: KeyboardEvent): void {
     this.camera.keyUp(key);
   }
 
-  keyDown(key: KeyboardEvent): void {
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(key: KeyboardEvent): void {
     this.camera.keyDown(key);
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onWindowResize(event) {
+    this.camera.resize(event.target.innerWidth, event.target.innerHeight);    
+    this.renderer.setSize(event.target.innerWidth, event.target.innerHeight);
+    return true;
   }
 
   public render() {

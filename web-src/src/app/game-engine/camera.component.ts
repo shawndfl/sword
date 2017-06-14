@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import * as THREE from 'three';
 
 @Component({})
-export class CameraComponent implements OnInit {
+export class CameraComponent {
 
   public camera: THREE.PerspectiveCamera;
   private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
@@ -120,6 +120,11 @@ export class CameraComponent implements OnInit {
     //console.log("Up  key.char: " + key.keyCode);
   }
 
+  public resize(width: number, height: number): void {
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+  }
+
   private updateCamera(): void {
 
     //console.log("angle: " + this.angle.x + ", " + this.angle.y);
@@ -150,10 +155,6 @@ export class CameraComponent implements OnInit {
     look.normalize();
 
     this.lookatForCamera(right, up, look, this.position);
-  }
-
-  ngOnInit() {
-
   }
 
 }

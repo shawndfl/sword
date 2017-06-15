@@ -12,7 +12,7 @@ interface ILocationFormState {
   styleUrls: ['./main-game.component.css']
 })
 export class MainGameComponent {
-  public selected: string = "cube";
+  public selected: string = "loader";
 
   scene: FormControl = new FormControl();
 

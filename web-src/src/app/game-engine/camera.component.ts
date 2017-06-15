@@ -7,34 +7,28 @@ export class CameraComponent {
   public camera: THREE.PerspectiveCamera;
   private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
   private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
-  private readonly Scale: number = .05;
+  private readonly Scale: number = .005;
   private readonly MoveScale: number = 5;
   private readonly TwoPi: number = Math.PI * 2.0;
 
-  private position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
+  private position: THREE.Vector3 = new THREE.Vector3(0, 0, 300);
 
   constructor() {
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-
-    var position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
-    var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
-    var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-    var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-    this.lookatForCamera(right, up, look, position);
+    
+   this.updateCamera();   
   }
 
   debug(): void {
-
-    var position: THREE.Vector3 = new THREE.Vector3(0, 0, -300);
-    var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
-    var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-    var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+    
+    var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+    var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+    var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
 
     this.camera.matrix.extractBasis(right, up, look);
     var te = this.camera.matrix.elements;
     var position = new THREE.Vector3(te[12], te[13], te[14]);
-
 
     console.log("right: " + right.x + ", " + right.y + ", " + right.z);
     console.log("up: " + up.x + ", " + up.y + ", " + up.z);
@@ -58,13 +52,13 @@ export class CameraComponent {
   move(mouse: MouseEvent): void {
 
     if (mouse.buttons === 1) {
-      var deltaX = (this.lastPosition.x - mouse.x) * this.Scale;
-      var deltaY = (this.lastPosition.y - mouse.y) * this.Scale;
+      var deltaX = -(mouse.x - this.lastPosition.x) * this.Scale;
+      var deltaY = -(mouse.y - this.lastPosition.y) * this.Scale;
 
-      this.angle.x += deltaX * this.Scale;
-      this.angle.y += deltaY * this.Scale;
+      this.angle.x += deltaX;
+      this.angle.y += deltaY;
 
-      this.updateCamera();
+      this.updateCamera();      
     }
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
@@ -100,7 +94,6 @@ export class CameraComponent {
       var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
       var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
       var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-
 
       this.camera.matrix.extractBasis(right, up, look);
 
@@ -140,7 +133,7 @@ export class CameraComponent {
     if (this.angle.y < -this.TwoPi)
       this.angle.y += this.TwoPi;
 
-    var look: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
+    var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
     var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
     var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
 

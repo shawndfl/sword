@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
-import { CameraComponent } from '../game-engine/camera.component'
-
+import { CameraComponent } from '../game-engine/camera.component';
+import * as DATA from '../game-engine/data';
 import * as THREE from 'three';
 
 @Component({
@@ -24,50 +24,122 @@ export class ScnLoaderComponent {
     this.render();
   }
 
-  private loadMesh(json): THREE.Mesh {
+  private loadMesh(): THREE.Mesh {
 
     var geometry = new THREE.BufferGeometry();
     var vertices = new Float32Array([
-       0.0,  1.0,  1.0,
-       1.0,  1.0,  1.0,
-       1.0,  0.0,  1.0,
-       0.0,  0.0,  1.0,
+      0.0, 1.0, 1.0,
+      1.0, 1.0, 1.0,
+      1.0, 0.0, 1.0,
+      0.0, 0.0, 1.0,
 
-      0.0,  1.0,  0.0,
-      1.0,  1.0,  0.0,
-      1.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,
+      0.0, 1.0, 0.0,
+      1.0, 1.0, 0.0,
+      1.0, 0.0, 0.0,
+      0.0, 0.0, 0.0,
     ]);
 
-     var indices = new Uint16Array([
-      0,3,1,  //front
-      1,3,2,
-      
-      1,2,5,  //right
-      5,2,6,
+    var indices = new Uint16Array([
+      0, 3, 1,  //front
+      1, 3, 2,
 
-      5,6,7, //back
-      4,5,7,
+      1, 2, 5,  //right
+      5, 2, 6,
 
-      4,7,3, //left
-      0,4,3,
+      5, 6, 7, //back
+      4, 5, 7,
 
-      2,3,7, //bottom
-      6,2,7,
+      4, 7, 3, //left
+      0, 4, 3,
 
-      4,0,5,  //top
-      5,0,1
+      2, 3, 7, //bottom
+      6, 2, 7,
 
-     ])
+      4, 0, 5,  //top
+      5, 0, 1
 
-    geometry.setIndex( new THREE.BufferAttribute(indices, 1) );
+    ])
+
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
     geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    var material = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+    var material = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: false });
 
     var mesh = new THREE.Mesh(geometry, material);
     mesh.scale.x = mesh.scale.y = mesh.scale.z = 20;
 
+    console.log(JSON.stringify(mesh));
     return mesh;
+  }
+
+  private loadMeshJson(): void {
+    var loader = new THREE.FileLoader();
+
+    loader.setResponseType('json');
+    var mesh: THREE.Mesh;
+
+    loader.load('assets/test-model.json', (json) => {
+      var model: DATA.Model = new DATA.Model();//JSON.parse(json);
+      model.nodes = new Array<DATA.Node>();
+      model.materials = new Array<DATA.Material>();
+
+      var node: DATA.Node = new DATA.Node();
+      node.name = "box01";
+      node.matId = 0;
+      node.vertices = ([
+        0.0, 1.0, 1.0,
+        1.0, 1.0, 1.0,
+        1.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+
+        0.0, 1.0, 0.0,
+        1.0, 1.0, 0.0,
+        1.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+      ]);
+
+      node.faces = ([
+        0, 3, 1,  //front
+        1, 3, 2,
+
+        1, 2, 5,  //right
+        5, 2, 6,
+
+        5, 6, 7, //back
+        4, 5, 7,
+
+        4, 7, 3, //left
+        0, 4, 3,
+
+        2, 3, 7, //bottom
+        6, 2, 7,
+
+        4, 0, 5,  //top
+        5, 0, 1
+
+      ]);
+
+      model.nodes.push(node);
+      var geometry = new THREE.BufferGeometry();
+      geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(model.nodes[0].faces), 1));
+      geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(model.nodes[0].vertices), 3));
+      var matId = model.nodes[0].matId;
+
+      var material: DATA.Material = new DATA.Material();
+      material.diffusedCol = ([1,1,0]);
+      material.id = 0;
+
+      model.materials.push(material);
+
+      var basic = new THREE.MeshBasicMaterial();
+      var color = model.materials[matId].diffusedCol;
+      basic.color = new THREE.Color(color[0], color[1], color[2]);
+      basic.wireframe = false;
+
+      console.log(JSON.stringify(model));
+
+      mesh = new THREE.Mesh(geometry, basic);
+      this.scene.add(mesh);
+    });
   }
 
   public init() {
@@ -80,9 +152,8 @@ export class ScnLoaderComponent {
 
     var mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = 10;
-    //this.scene.add(mesh);
-    this.scene.add(this.loadMesh(null));
-
+    this.loadMeshJson();
+    //this.scene.add(mesh);    
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);

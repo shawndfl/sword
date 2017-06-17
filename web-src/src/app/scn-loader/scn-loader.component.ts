@@ -35,9 +35,10 @@ export class ScnLoaderComponent {
       node.name = "box01";
       node.matId = 0;
       node.scale = ([15, 20, 25]);
-      node.translation = ([-15, -20, -25]);
+      node.translation = ([15, 20, 25]);
+
       var rot = new THREE.Quaternion();
-      rot.setFromAxisAngle(new THREE.Vector3(0,0,1), -Math.PI/8.0 );      
+      rot.setFromAxisAngle(new THREE.Vector3(0,0,1), 0);//Math.PI );      
       node.rotation = ([rot.x, rot.y, rot.z, rot.w]);
       node.vertices = ([
        -1.0, 1.0, 1.0,
@@ -49,6 +50,18 @@ export class ScnLoaderComponent {
         1.0, 1.0, -1.0,
         1.0, -1.0, -1.0,
         -1.0, -1.0, -1.0,
+      ]);
+
+      node.tex1 = ([
+        0.0, 1.0,
+        1.0, 1.0,
+        1.0, 0.0,
+        0.0, 0.0,
+
+        0.0, 1.0,
+        1.0, 1.0,
+        1.0, 0.0,
+        0.0, 0.0,
       ]);
 
       node.faces = ([
@@ -90,6 +103,7 @@ export class ScnLoaderComponent {
 
       var material: DATA.Material = new DATA.Material();
       material.diffusedCol = ([1,1,0]);
+      material.diffusedTex = 'assets/house.png';
       material.id = 0;
 
       model.materials.push(material);

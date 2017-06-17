@@ -26,6 +26,7 @@ export class Node {
     scale: number[];   //x,y,z
 
     vertices: number[];
+    tex1: number[];    
     faces: number[];
 
     matId: number;
@@ -36,7 +37,7 @@ export class Node {
 export class Material {
     id: number;
     diffusedCol: number[];
-    diffusedTxt: string;
+    diffusedTex: string;
 }
 
 export class Model {

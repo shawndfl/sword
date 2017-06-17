@@ -23,12 +23,18 @@ export class ModelLoader {
       var geometry = new THREE.BufferGeometry();
       geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(node.faces), 1));
       geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(node.vertices), 3));
+      geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(node.tex1), 2));
       var matId = node.matId;
 
       // Set material
+      var textue = model.materials[matId].diffusedTex;
+      var diffused = new THREE.TextureLoader().load( textue );
+      diffused.wrapS = THREE.RepeatWrapping;
+
       var basic = new THREE.MeshBasicMaterial();
       var color = model.materials[matId].diffusedCol;
       basic.color = new THREE.Color(color[0], color[1], color[2]);
+      basic.map = diffused;
       basic.wireframe = false;
 
       var mesh = new THREE.Mesh(geometry, basic);     

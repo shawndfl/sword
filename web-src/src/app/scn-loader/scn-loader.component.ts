@@ -1,6 +1,7 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
 import * as DATA from '../game-engine/data';
+import * as LOADER from '../game-engine/model.loader';
 import * as THREE from 'three';
 
 @Component({
@@ -24,77 +25,30 @@ export class ScnLoaderComponent {
     this.render();
   }
 
-  private loadMesh(): THREE.Mesh {
+  private BuildSampleModel(): void {   
 
-    var geometry = new THREE.BufferGeometry();
-    var vertices = new Float32Array([
-      0.0, 1.0, 1.0,
-      1.0, 1.0, 1.0,
-      1.0, 0.0, 1.0,
-      0.0, 0.0, 1.0,
-
-      0.0, 1.0, 0.0,
-      1.0, 1.0, 0.0,
-      1.0, 0.0, 0.0,
-      0.0, 0.0, 0.0,
-    ]);
-
-    var indices = new Uint16Array([
-      0, 3, 1,  //front
-      1, 3, 2,
-
-      1, 2, 5,  //right
-      5, 2, 6,
-
-      5, 6, 7, //back
-      4, 5, 7,
-
-      4, 7, 3, //left
-      0, 4, 3,
-
-      2, 3, 7, //bottom
-      6, 2, 7,
-
-      4, 0, 5,  //top
-      5, 0, 1
-
-    ])
-
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-    geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    var material = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: false });
-
-    var mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = 20;
-
-    console.log(JSON.stringify(mesh));
-    return mesh;
-  }
-
-  private loadMeshJson(): void {
-    var loader = new THREE.FileLoader();
-
-    loader.setResponseType('json');
-    var mesh: THREE.Mesh;
-
-    loader.load('assets/test-model.json', (json) => {
-      var model: DATA.Model = new DATA.Model();//JSON.parse(json);
+      var model: DATA.Model = new DATA.Model();
       model.nodes = new Array<DATA.Node>();
       model.materials = new Array<DATA.Material>();
 
       var node: DATA.Node = new DATA.Node();
       node.name = "box01";
       node.matId = 0;
+      node.scale = ([15, 20, 25]);
+      node.translation = ([-15, -20, -25]);
+      var rot = new THREE.Quaternion();
+      rot.setFromAxisAngle(new THREE.Vector3(0,0,1), -Math.PI/8.0 );      
+      node.rotation = ([rot.x, rot.y, rot.z, rot.w]);
       node.vertices = ([
-        0.0, 1.0, 1.0,
+       -1.0, 1.0, 1.0,
         1.0, 1.0, 1.0,
-        1.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
+        1.0, -1.0, 1.0,
+        -1.0, -1.0, 1.0,
 
-        0.0, 1.0, 0.0,
-        1.0, 1.0, 0.0,
-        1.0, 0.0, 0.0,
-        0.0, 0.0, 0.0,
+        -1.0, 1.0, -1.0,
+        1.0, 1.0, -1.0,
+        1.0, -1.0, -1.0,
+        -1.0, -1.0, -1.0,
       ]);
 
       node.faces = ([
@@ -118,10 +72,20 @@ export class ScnLoaderComponent {
 
       ]);
 
+      //create an animation clip for this node
+      node.clip = new DATA.AnimationClip();      
+      node.clip.duration = 2.0;
+      node.clip.tracks = new Array<DATA.KeyFrameTrack>();
+      var track1 = new DATA.KeyFrameTrack();
+
+      // add a track
+      track1.name="move-box";
+      track1.times= ([0,.5,1]);
+      track1.values=([[0,0,0 ], [0,10,0], [1,20,0]]);      
+
+      node.clip.tracks.push(track1);      
+
       model.nodes.push(node);
-      var geometry = new THREE.BufferGeometry();
-      geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(model.nodes[0].faces), 1));
-      geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(model.nodes[0].vertices), 3));
       var matId = model.nodes[0].matId;
 
       var material: DATA.Material = new DATA.Material();
@@ -129,31 +93,26 @@ export class ScnLoaderComponent {
       material.id = 0;
 
       model.materials.push(material);
-
-      var basic = new THREE.MeshBasicMaterial();
+      
       var color = model.materials[matId].diffusedCol;
-      basic.color = new THREE.Color(color[0], color[1], color[2]);
-      basic.wireframe = false;
 
+      // DEBUG the json we created
       console.log(JSON.stringify(model));
 
-      mesh = new THREE.Mesh(geometry, basic);
-      this.scene.add(mesh);
-    });
+      // Create the mesh
+      var loader :LOADER.ModelLoader = new LOADER.ModelLoader();
+      var mesh = loader.loadModel(model);      
+      
+      // Add the mesh to the scene
+      this.scene.add(mesh);          
   }
 
   public init() {
 
     this.scene = new THREE.Scene();
     this.camera = new CameraComponent();
-
-    var geometry = new THREE.BoxGeometry(20, 20, 20);
-    var material = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: false });
-
-    var mesh = new THREE.Mesh(geometry, material);
-    mesh.position.y = 10;
-    this.loadMeshJson();
-    //this.scene.add(mesh);    
+   
+    this.BuildSampleModel();    
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);

@@ -1,31 +1,46 @@
 
 export class Metadata {
     version: number;
-    generatedBy: string;    
+    generatedBy: string;
+}
+
+
+export class KeyFrameTrack {
+    name: string;
+    times: number[];
+    values: any[];    
+    interpolation: THREE.InterpolationModes;
+}
+
+export class AnimationClip {    
+    duration: number;
+    tracks: KeyFrameTrack[];
 }
 
 export class Node {
     name: string;
     parent: string;
 
-    translation: THREE.Vector3;
-    rotation: THREE.Quaternion;
-    scale: THREE.Vector3;
+    translation: number[];   //x,y,z
+    rotation: number[]; //quaternion;
+    scale: number[];   //x,y,z
 
     vertices: number[];
     faces: number[];
 
     matId: number;
+
+    clip: AnimationClip;
 }
 
-export class Material{
+export class Material {
     id: number;
     diffusedCol: number[];
     diffusedTxt: string;
 }
 
 export class Model {
-    metadata: Metadata;    
+    metadata: Metadata;
     nodes: Node[];
-    materials: Material[];
+    materials: Material[];    
 }

@@ -38,33 +38,36 @@ export class ModelLoader {
       basic.wireframe = false;
 
       var mesh = new THREE.Mesh(geometry, basic);     
+      mesh.position.x = node.translation[0];
+      mesh.position.y = node.translation[1];
+      mesh.position.z = node.translation[2];
 
+      mesh.scale.x = node.scale[0];
+      mesh.scale.y = node.scale[1];
+      mesh.scale.z = node.scale[2];
+
+      mesh.quaternion.x =  node.rotation[0];
+      mesh.quaternion.y =  node.rotation[1];
+      mesh.quaternion.z =  node.rotation[2];
+      mesh.quaternion.w =  node.rotation[3];      
       // Load Transformation
-      mesh.matrix.identity();
+      //mesh.matrix.identity();
       
-      mesh.matrix.elements[0] = node.scale[0];
-      mesh.matrix.elements[5] = node.scale[1];
-      mesh.matrix.elements[10] = node.scale[2];      
+      //mesh.matrix.elements[0] = node.scale[0];
+      //mesh.matrix.elements[5] = node.scale[1];
+      //mesh.matrix.elements[10] = node.scale[2];      
 
-      mesh.matrix.elements[12] = node.translation[0];
-      mesh.matrix.elements[13] = node.translation[1];
-      mesh.matrix.elements[14] = node.translation[2];
+      //mesh.matrix.elements[12] = node.translation[0];
+      //mesh.matrix.elements[13] = node.translation[1];
+      //mesh.matrix.elements[14] = node.translation[2];
 
-      var rotMat = new THREE.Matrix4();
-      rotMat.makeRotationFromQuaternion(new THREE.Quaternion(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]));
+      //var rotMat = new THREE.Matrix4();
+      //rotMat.makeRotationFromQuaternion(new THREE.Quaternion(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]));
 
-      mesh.matrix.multiply(rotMat);
-      mesh.matrixAutoUpdate = false;
+      //mesh.matrix.multiply(rotMat);
+      //mesh.matrixAutoUpdate = false;
 
-      // TODO Load Animation 
-      //var trackData = node.clip.tracks[0];
-
-      //var track = ([new THREE.KeyframeTrack(trackData.name, trackData.times, trackData.values, trackData.interpolation)]);
-      //var clip : THREE.AnimationClip = new THREE.AnimationClip("none", node.clip.duration, track);
-
-      //var mixer: THREE.AnimationMixer = new THREE.AnimationMixer(mesh);
       
-      //var action: THREE.AnimationAction = mixer.
       return mesh;
 
    }

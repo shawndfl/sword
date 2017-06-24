@@ -16,6 +16,9 @@ export class ScnLoaderComponent {
   renderer: THREE.WebGLRenderer;
   mainTag: string;
 
+  mixer: THREE.AnimationMixer;
+  clock: THREE.Clock;
+
   constructor() {
     this.mainTag = "mainGame";
   }
@@ -38,7 +41,7 @@ export class ScnLoaderComponent {
       node.translation = ([15, 20, 25]);
 
       var rot = new THREE.Quaternion();
-      rot.setFromAxisAngle(new THREE.Vector3(0,0,1), 0);//Math.PI );      
+      rot.setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/4.0 );      
       node.rotation = ([rot.x, rot.y, rot.z, rot.w]);
       node.vertices = ([
        -1.0, 1.0, 1.0,
@@ -87,14 +90,20 @@ export class ScnLoaderComponent {
 
       //create an animation clip for this node
       node.clip = new DATA.AnimationClip();      
+      node.clip.name = "Move";
       node.clip.duration = 2.0;
       node.clip.tracks = new Array<DATA.KeyFrameTrack>();
       var track1 = new DATA.KeyFrameTrack();
 
       // add a track
-      track1.name="move-box";
-      track1.times= ([0,.5,1]);
-      track1.values=([[0,0,0 ], [0,10,0], [1,20,0]]);      
+      track1.name="box01.position";
+      track1.times= ([0, 1, 2, 3]);
+      track1.values=([
+                      0, 20, 0, 
+                      20, 20, 0,
+                      40, 20, 0,
+                      60, 20, 0,
+                      ]);;      
 
       node.clip.tracks.push(track1);      
 
@@ -117,8 +126,33 @@ export class ScnLoaderComponent {
       var loader :LOADER.ModelLoader = new LOADER.ModelLoader();
       var mesh = loader.loadModel(model);      
       
+      this.animate(mesh)
       // Add the mesh to the scene
       this.scene.add(mesh);          
+  }
+
+  public animate(mesh: THREE.Mesh): void
+  {
+      this.clock = new THREE.Clock();
+
+      // TODO Load Animation 
+      var times: number[] = ([0, 1, 2, 3]);
+      var values: number[] = ([0, 20, 0, 
+                              20, 20, 0,
+                              40, 20, 0,
+                              60, 20, 0,
+                               ]);
+      
+      var tracks = ([new THREE.KeyframeTrack("box01.position", times, values, THREE.InterpolateLinear )]);
+      var clip : THREE.AnimationClip = new THREE.AnimationClip("Move", -1, tracks);      
+
+      this.mixer = new THREE.AnimationMixer(mesh);            
+      var action: THREE.AnimationAction = this.mixer.clipAction(clip);
+
+      action.setEffectiveTimeScale(-1);
+      action.loop = true;
+      action.setLoop(THREE.LoopPingPong, Infinity);
+      action.play();      
   }
 
   public init() {
@@ -126,7 +160,7 @@ export class ScnLoaderComponent {
     this.scene = new THREE.Scene();
     this.camera = new CameraComponent();
    
-    this.BuildSampleModel();    
+    this.BuildSampleModel();      
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -172,6 +206,9 @@ export class ScnLoaderComponent {
 
   public render() {
     requestAnimationFrame(() => this.render());
+
+    this.mixer.update( this.clock.getDelta() );
+
     this.renderer.render(this.scene, this.camera.camera);
   }
 

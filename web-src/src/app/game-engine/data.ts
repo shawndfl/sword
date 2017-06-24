@@ -13,6 +13,7 @@ export class KeyFrameTrack {
 }
 
 export class AnimationClip {    
+    name: String;
     duration: number;
     tracks: KeyFrameTrack[];
 }

@@ -3,12 +3,16 @@ import * as THREE from 'three';
 
 export class ModelLoader {
 
-   public loadModelJson(json: string, onLoad, onProgress?, onError?): void {
+   private mixer: THREE.AnimationMixer;
+
+   public loadModelJson(pathToJson: string, onLoad, onProgress?, onError?): void {
       var loader = new THREE.FileLoader();
 
-      loader.setResponseType('json');
-      loader.load('assets/test-model.json', (json) => {
-         var model: DATA.Model = JSON.parse(json);
+      // Cannot use json because the onLoad method expects a string 
+      // and making this json will return an object.
+      loader.setResponseType('text'); 
+      loader.load(pathToJson, (json) => {
+         let model: DATA.Model = JSON.parse(json);
          var mesh: THREE.Mesh = this.loadModel(model);
          onLoad(mesh);
       }, onProgress, onError);
@@ -28,7 +32,7 @@ export class ModelLoader {
 
       // Set material
       var textue = model.materials[matId].diffusedTex;
-      var diffused = new THREE.TextureLoader().load( textue );
+      var diffused = new THREE.TextureLoader().load(textue);
       diffused.wrapS = THREE.RepeatWrapping;
 
       var basic = new THREE.MeshBasicMaterial();
@@ -37,7 +41,9 @@ export class ModelLoader {
       basic.map = diffused;
       basic.wireframe = false;
 
-      var mesh = new THREE.Mesh(geometry, basic);     
+      var mesh = new THREE.Mesh(geometry, basic);
+
+      // Set transformation
       mesh.position.x = node.translation[0];
       mesh.position.y = node.translation[1];
       mesh.position.z = node.translation[2];
@@ -46,30 +52,41 @@ export class ModelLoader {
       mesh.scale.y = node.scale[1];
       mesh.scale.z = node.scale[2];
 
-      mesh.quaternion.x =  node.rotation[0];
-      mesh.quaternion.y =  node.rotation[1];
-      mesh.quaternion.z =  node.rotation[2];
-      mesh.quaternion.w =  node.rotation[3];      
-      // Load Transformation
-      //mesh.matrix.identity();
-      
-      //mesh.matrix.elements[0] = node.scale[0];
-      //mesh.matrix.elements[5] = node.scale[1];
-      //mesh.matrix.elements[10] = node.scale[2];      
+      mesh.quaternion.x = node.rotation[0];
+      mesh.quaternion.y = node.rotation[1];
+      mesh.quaternion.z = node.rotation[2];
+      mesh.quaternion.w = node.rotation[3];
 
-      //mesh.matrix.elements[12] = node.translation[0];
-      //mesh.matrix.elements[13] = node.translation[1];
-      //mesh.matrix.elements[14] = node.translation[2];
-
-      //var rotMat = new THREE.Matrix4();
-      //rotMat.makeRotationFromQuaternion(new THREE.Quaternion(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]));
-
-      //mesh.matrix.multiply(rotMat);
-      //mesh.matrixAutoUpdate = false;
-
+      // Load animations            
+      this.loadAnimation(model.clip, mesh);      
       
       return mesh;
 
+   }
+
+   private loadAnimation(clip: DATA.AnimationClip, root): void {
+
+      var tracks = new Array<THREE.KeyframeTrack>();
+      for(let track of clip.tracks)
+      {
+         var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, THREE.InterpolateLinear);
+         tracks.push(animationTrack);
+      }
+
+      var animationClip: THREE.AnimationClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+
+      this.mixer = new THREE.AnimationMixer(root);      
+      var action: THREE.AnimationAction = this.mixer.clipAction(animationClip);
+
+      action.setEffectiveTimeScale(-1);
+      action.loop = true;
+      action.setLoop(THREE.LoopPingPong, Infinity);
+      action.play();
+   }
+
+   public update(delta: number) {
+      if (this.mixer != undefined)
+         this.mixer.update(delta);
    }
 
 }

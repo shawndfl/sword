@@ -4,7 +4,6 @@ export class Metadata {
     generatedBy: string;
 }
 
-
 export class KeyFrameTrack {
     name: string;
     times: number[];
@@ -13,7 +12,7 @@ export class KeyFrameTrack {
 }
 
 export class AnimationClip {    
-    name: String;
+    name: string;
     duration: number;
     tracks: KeyFrameTrack[];
 }
@@ -30,9 +29,7 @@ export class Node {
     tex1: number[];    
     faces: number[];
 
-    matId: number;
-
-    clip: AnimationClip;
+    matId: number;    
 }
 
 export class Material {
@@ -45,4 +42,5 @@ export class Model {
     metadata: Metadata;
     nodes: Node[];
     materials: Material[];    
+    clip: AnimationClip;
 }

@@ -19,6 +19,11 @@ export class ScnLoaderComponent {
   mixer: THREE.AnimationMixer;
   clock: THREE.Clock;
 
+  model: LOADER.ModelLoader
+
+  ready: boolean = false;
+
+
   constructor() {
     this.mainTag = "mainGame";
   }
@@ -28,139 +33,121 @@ export class ScnLoaderComponent {
     this.render();
   }
 
-  private BuildSampleModel(): void {   
+  private BuildSampleModel(scene: THREE.Scene): void {
 
-      var model: DATA.Model = new DATA.Model();
-      model.nodes = new Array<DATA.Node>();
-      model.materials = new Array<DATA.Material>();
+    var modelData: DATA.Model = new DATA.Model();
+    modelData.nodes = new Array<DATA.Node>();
+    modelData.materials = new Array<DATA.Material>();
 
-      var node: DATA.Node = new DATA.Node();
-      node.name = "box01";
-      node.matId = 0;
-      node.scale = ([15, 20, 25]);
-      node.translation = ([15, 20, 25]);
+    var node: DATA.Node = new DATA.Node();
+    node.name = "box01";
+    node.matId = 0;
+    node.scale = ([15, 20, 25]);
+    node.translation = ([15, 20, 25]);
 
-      var rot = new THREE.Quaternion();
-      rot.setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/4.0 );      
-      node.rotation = ([rot.x, rot.y, rot.z, rot.w]);
-      node.vertices = ([
-       -1.0, 1.0, 1.0,
-        1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0,
-        -1.0, -1.0, 1.0,
+    var rot = new THREE.Quaternion();
+    rot.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4.0);
+    node.rotation = ([rot.x, rot.y, rot.z, rot.w]);
+    node.vertices = ([
+      -1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0,
+      1.0, -1.0, 1.0,
+      -1.0, -1.0, 1.0,
 
-        -1.0, 1.0, -1.0,
-        1.0, 1.0, -1.0,
-        1.0, -1.0, -1.0,
-        -1.0, -1.0, -1.0,
-      ]);
+      -1.0, 1.0, -1.0,
+      1.0, 1.0, -1.0,
+      1.0, -1.0, -1.0,
+      -1.0, -1.0, -1.0,
+    ]);
 
-      node.tex1 = ([
-        0.0, 1.0,
-        1.0, 1.0,
-        1.0, 0.0,
-        0.0, 0.0,
+    node.tex1 = ([
+      0.0, 1.0,
+      1.0, 1.0,
+      1.0, 0.0,
+      0.0, 0.0,
 
-        0.0, 1.0,
-        1.0, 1.0,
-        1.0, 0.0,
-        0.0, 0.0,
-      ]);
+      0.0, 1.0,
+      1.0, 1.0,
+      1.0, 0.0,
+      0.0, 0.0,
+    ]);
 
-      node.faces = ([
-        0, 3, 1,  //front
-        1, 3, 2,
+    node.faces = ([
+      0, 3, 1,  //front
+      1, 3, 2,
 
-        1, 2, 5,  //right
-        5, 2, 6,
+      1, 2, 5,  //right
+      5, 2, 6,
 
-        5, 6, 7, //back
-        4, 5, 7,
+      5, 6, 7, //back
+      4, 5, 7,
 
-        4, 7, 3, //left
-        0, 4, 3,
+      4, 7, 3, //left
+      0, 4, 3,
 
-        2, 3, 7, //bottom
-        6, 2, 7,
+      2, 3, 7, //bottom
+      6, 2, 7,
 
-        4, 0, 5,  //top
-        5, 0, 1
+      4, 0, 5,  //top
+      5, 0, 1
 
-      ]);
+    ]);
 
-      //create an animation clip for this node
-      node.clip = new DATA.AnimationClip();      
-      node.clip.name = "Move";
-      node.clip.duration = 2.0;
-      node.clip.tracks = new Array<DATA.KeyFrameTrack>();
-      var track1 = new DATA.KeyFrameTrack();
+    //create an animation clip for this node
+    modelData.clip = new DATA.AnimationClip();
+    var clip: DATA.AnimationClip = modelData.clip;
 
-      // add a track
-      track1.name="box01.position";
-      track1.times= ([0, 1, 2, 3]);
-      track1.values=([
-                      0, 20, 0, 
-                      20, 20, 0,
-                      40, 20, 0,
-                      60, 20, 0,
-                      ]);;      
+    clip.name = "Move";
+    clip.duration = 3.0;
+    clip.tracks = new Array<DATA.KeyFrameTrack>();
 
-      node.clip.tracks.push(track1);      
+    // Make a track
+    var track1 = new DATA.KeyFrameTrack();
 
-      model.nodes.push(node);
-      var matId = model.nodes[0].matId;
+    // add a track
+    track1.name = "box01.position";
+    track1.times = ([0, 1, 2, 3]);
+    track1.values = ([
+      0, 20, 0,
+      20, 20, 0,
+      40, 20, 0,
+      70, 20, 50,
+    ]);;
 
-      var material: DATA.Material = new DATA.Material();
-      material.diffusedCol = ([1,1,0]);
-      material.diffusedTex = 'assets/house.png';
-      material.id = 0;
+    clip.tracks.push(track1);
 
-      model.materials.push(material);
-      
-      var color = model.materials[matId].diffusedCol;
+    modelData.nodes.push(node);
+    var matId = modelData.nodes[0].matId;
 
-      // DEBUG the json we created
-      console.log(JSON.stringify(model));
+    var material: DATA.Material = new DATA.Material();
+    material.diffusedCol = ([1, 1, 0]);
+    material.diffusedTex = 'assets/house.png';
+    material.id = 0;
 
-      // Create the mesh
-      var loader :LOADER.ModelLoader = new LOADER.ModelLoader();
-      var mesh = loader.loadModel(model);      
-      
-      this.animate(mesh)
+    modelData.materials.push(material);
+
+    var color = modelData.materials[matId].diffusedCol;
+
+    // DEBUG the json we created
+    console.log(JSON.stringify(modelData));
+
+    // Create the mesh
+    this.model = new LOADER.ModelLoader();
+    //var mesh = this.model.loadModel(modelData);      
+
+    var mesh = this.model.loadModelJson("assets/test-model.json", function (mesh: THREE.Mesh) {
       // Add the mesh to the scene
-      this.scene.add(mesh);          
-  }
-
-  public animate(mesh: THREE.Mesh): void
-  {
-      this.clock = new THREE.Clock();
-
-      // TODO Load Animation 
-      var times: number[] = ([0, 1, 2, 3]);
-      var values: number[] = ([0, 20, 0, 
-                              20, 20, 0,
-                              40, 20, 0,
-                              60, 20, 0,
-                               ]);
-      
-      var tracks = ([new THREE.KeyframeTrack("box01.position", times, values, THREE.InterpolateLinear )]);
-      var clip : THREE.AnimationClip = new THREE.AnimationClip("Move", -1, tracks);      
-
-      this.mixer = new THREE.AnimationMixer(mesh);            
-      var action: THREE.AnimationAction = this.mixer.clipAction(clip);
-
-      action.setEffectiveTimeScale(-1);
-      action.loop = true;
-      action.setLoop(THREE.LoopPingPong, Infinity);
-      action.play();      
+      scene.add(mesh);
+    });
   }
 
   public init() {
 
+    this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.camera = new CameraComponent();
-   
-    this.BuildSampleModel();      
+
+    this.BuildSampleModel(this.scene);
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -206,8 +193,7 @@ export class ScnLoaderComponent {
 
   public render() {
     requestAnimationFrame(() => this.render());
-
-    this.mixer.update( this.clock.getDelta() );
+    this.model.update(this.clock.getDelta())
 
     this.renderer.render(this.scene, this.camera.camera);
   }

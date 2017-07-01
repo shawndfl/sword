@@ -38,8 +38,13 @@ export class Material {
     diffusedTex: string;
 }
 
+export class Camera {
+    
+}
+
 export class Model {
     metadata: Metadata;
+    camera: Camera;
     nodes: Node[];
     materials: Material[];    
     clip: AnimationClip;

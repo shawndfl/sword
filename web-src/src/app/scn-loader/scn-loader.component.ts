@@ -38,7 +38,8 @@ export class ScnLoaderComponent {
     // Create the mesh
     this.model = new LOADER.ModelLoader();    
 
-    var mesh = this.model.loadModelJson("assets/test-model.json", function (mesh: THREE.Mesh) {
+    var mesh = this.model.loadModelJson("assets/Character.json", function (mesh: THREE.Mesh) {
+      //mesh.rotation.y = Math.PI/2.0;
       // Add the mesh to the scene
       scene.add(mesh);
     });

@@ -26,6 +26,7 @@ export class Node {
     scale: number[];   //x,y,z
 
     vertices: number[];
+    normals: number[];
     tex1: number[];    
     faces: number[];
 
@@ -39,7 +40,7 @@ export class Material {
 }
 
 export class Camera {
-    
+
 }
 
 export class Model {

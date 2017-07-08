@@ -11,7 +11,7 @@ export class CameraComponent {
   private readonly MoveScale: number = 5;
   private readonly TwoPi: number = Math.PI * 2.0;
 
-  private position: THREE.Vector3 = new THREE.Vector3(0, 0, 300);
+  private position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
 
   constructor() {
 

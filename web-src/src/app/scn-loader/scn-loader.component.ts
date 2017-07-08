@@ -1,5 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
+import { Character } from '../game-engine/character';
 import * as DATA from '../game-engine/data';
 import * as LOADER from '../game-engine/model.loader';
 import * as THREE from 'three';
@@ -23,6 +24,8 @@ export class ScnLoaderComponent {
 
   ready: boolean = false;
 
+  light1 : THREE.PointLight;
+  light2 : THREE.PointLight;
 
   constructor() {
     this.mainTag = "mainGame";
@@ -50,15 +53,37 @@ export class ScnLoaderComponent {
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.camera = new CameraComponent();
+    
+    //this.BuildSampleModel(this.scene);
+    var character: Character = new Character();
+    character.buildCharacter();
+    this.scene.add(character.root);
 
-    this.BuildSampleModel(this.scene);
+    var ambient = new THREE.AmbientLight( 0x404040 ); // soft white light
+    this.scene.add( ambient );
+
+    var sphere = new THREE.SphereGeometry( 0.5, 16, 8 );
+
+    this.light1 = new THREE.PointLight( 0xffffff, .5, 10 );		
+    this.light1.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
+    this.light1.position.x = 40;
+    this.light1.position.y = 40;
+    this.light1.position.x = 40;
+		this.scene.add( this.light1 );
+
+    this.light2 = new THREE.PointLight( 0xffffff, .5, 10 );
+    this.light2.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xffff00 } ) ) );		
+    this.light2.position.x = -40;
+    this.light2.position.y = -40;
+    this.light2.position.x = -40;    
+		this.scene.add( this.light2 );
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.getElementById(this.mainTag).appendChild(this.renderer.domElement);
 
-    var gridHelper = new THREE.GridHelper(400, 40, 0x0000ff, 0x808080);
+    var gridHelper = new THREE.GridHelper(1000, 100, 0x0000ff, 0x808080);
     gridHelper.position.y = 0;
     gridHelper.position.x = 0;
     this.scene.add(gridHelper);
@@ -97,9 +122,20 @@ export class ScnLoaderComponent {
 
   public render() {
     requestAnimationFrame(() => this.render());
-    this.model.update(this.clock.getDelta())
+    //this.model.update(this.clock.getDelta())
 
     this.renderer.render(this.scene, this.camera.camera);
+
+    var time = Date.now() * 0.0005;
+
+    this.light1.position.x = Math.sin( time * 0.7 ) * 50 + 20;
+		this.light1.position.y = 30;//Math.cos( time * 0.5 ) * 70 + 20;
+		this.light1.position.z = Math.cos( time * 0.3 ) * 70 + 20;
+		this.light2.position.x = Math.cos( time * 0.3 ) * 70 + 20;
+		this.light2.position.y = Math.sin( time * 0.5 ) * 70 + 20;
+		this.light2.position.z = Math.sin( time * 0.7 ) * 70 + 20;
+
+
   }
 
 }

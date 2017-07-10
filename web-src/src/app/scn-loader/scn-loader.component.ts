@@ -27,6 +27,8 @@ export class ScnLoaderComponent {
   light1 : THREE.PointLight;
   light2 : THREE.PointLight;
 
+  character: Character;
+
   constructor() {
     this.mainTag = "mainGame";
   }
@@ -55,9 +57,9 @@ export class ScnLoaderComponent {
     this.camera = new CameraComponent();
     
     //this.BuildSampleModel(this.scene);
-    var character: Character = new Character();
-    character.buildCharacter();
-    this.scene.add(character.root);
+    this.character = new Character();
+    this.character.buildCharacter();
+    this.scene.add(this.character.root);
 
     var ambient = new THREE.AmbientLight( 0x404040 ); // soft white light
     this.scene.add( ambient );
@@ -123,6 +125,7 @@ export class ScnLoaderComponent {
   public render() {
     requestAnimationFrame(() => this.render());
     //this.model.update(this.clock.getDelta())
+    this.character.update(this.clock.getDelta());
 
     this.renderer.render(this.scene, this.camera.camera);
 

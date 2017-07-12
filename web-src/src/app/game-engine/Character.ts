@@ -169,14 +169,17 @@ export class Character {
         // Set material
         var textue = "assets/face.png";
         var diffused = new THREE.TextureLoader().load(textue);
-        diffused.wrapS = THREE.RepeatWrapping;
+        diffused.wrapS = THREE.ClampToEdgeWrapping;
+        diffused.wrapT = THREE.ClampToEdgeWrapping;
+        diffused.magFilter = THREE.NearestFilter;
+        diffused.minFilter = THREE.NearestMipMapNearestFilter;
 
         var material = new THREE.MeshPhongMaterial();
         material.color = new THREE.Color(1.0, 1.0, 1.0);
 
         material.shininess = 100.0;
         material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = true;
+        material.transparent = false;        
         material.map = diffused;
         material.wireframe = false;
 
@@ -297,8 +300,24 @@ export class Character {
         this.root.add(this.body);
     }
 
-
     private buildCube(): THREE.BufferGeometry {
+        return this.buildCubeOffset([0,0,0],
+        [4,0],
+        [1,0],
+        [5,0],
+        [3,0],
+        [2,0],
+        [0,0]);
+    }
+
+    private buildCubeOffset(offset: number[], 
+            nx: number[],
+            px: number[],
+            ny: number[],
+            py: number[],
+            nz: number[],
+            pz: number[])
+            : THREE.BufferGeometry {
 
         var vertices = [
             -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5,            //front
@@ -309,6 +328,14 @@ export class Character {
             -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, -0.5         //Bottom
         ];
 
+        //offset positions
+        for(var i =0; i < vertices.length; i+=3)
+        {
+            vertices[i] += offset[0];
+            vertices[i+1] += offset[1];
+            vertices[i+2] += offset[2];
+        }
+
         var normals = [
             0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
             1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
@@ -317,23 +344,47 @@ export class Character {
             0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
             0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
         ];
+        var s = 0.0625;                
+        var tex1 = [            
+            pz[0] * s,     1.0 - (pz[1] * s), 
+            pz[0] * s + s, 1.0 - (pz[1] * s),
+            pz[0] * s + s, 1.0 - (pz[1] * s + s),
+            pz[0] * s,     1.0 - (pz[1] * s + s), 
 
-        var tex1 = [
-            0.25, 0.75, 0.50, 0.75, 0.50, 0.50, 0.25, 0.50,
-            0.50, 0.75, 0.75, 0.75, 0.75, 0.50, 0.50, 0.50,
-            0.75, 0.75, 1.00, 0.75, 1.00, 0.50, 0.75, 0.50,
-            0.00, 0.75, 0.25, 0.75, 0.25, 0.50, 0.00, 0.50,
-            0.25, 1.00, 0.50, 1.00, 0.50, 0.75, 0.25, 0.75,
-            0.25, 0.50, 0.50, 0.50, 0.50, 0.25, 0.25, 0.25
-        ];
+            px[0] * s,     1.0 - (px[1] * s), 
+            px[0] * s + s, 1.0 - (px[1] * s),
+            px[0] * s + s, 1.0 - (px[1] * s + s),
+            px[0] * s,     1.0 - (px[1] * s + s), 
 
+            nz[0] * s,     1.0 - (nz[1] * s), 
+            nz[0] * s + s, 1.0 - (nz[1] * s),
+            nz[0] * s + s, 1.0 - (nz[1] * s + s),
+            nz[0] * s,     1.0 - (nz[1] * s + s), 
+
+            nx[0] * s,     1.0 - (nx[1] * s), 
+            nx[0] * s + s, 1.0 - (nx[1] * s),
+            nx[0] * s + s, 1.0 - (nx[1] * s + s),
+            nx[0] * s,     1.0 - (nx[1] * s + s), 
+
+            py[0] * s,     1.0 - (py[1] * s), 
+            py[0] * s + s, 1.0 - (py[1] * s),
+            py[0] * s + s, 1.0 - (py[1] * s + s),
+            py[0] * s,     1.0 - (py[1] * s + s), 
+
+            ny[0] * s,     1.0 - (ny[1] * s), 
+            ny[0] * s + s, 1.0 - (ny[1] * s),
+            ny[0] * s + s, 1.0 - (ny[1] * s + s),
+            ny[0] * s,     1.0 - (ny[1] * s + s), 
+
+        ]
+       
         var faces = [
             0, 3, 1, 1, 3, 2,                   //Front
             4, 7, 5, 7, 6, 5,                   //Left
-            8, 11, 9, 11, 10, 9,                //Right
-            12, 15, 13, 15, 14, 13,             
-            16, 19, 17, 19, 18, 17,
-            20, 23, 21, 23, 22, 21
+            8, 11, 9, 11, 10, 9,                //Back
+            12, 15, 13, 15, 14, 13,             //Right
+            16, 19, 17, 19, 18, 17,             //Top
+            20, 23, 21, 23, 22, 21              //Bottom
         ]
 
         // Load geometry

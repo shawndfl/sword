@@ -1,20 +1,47 @@
 
-export class Metadata {
-    version: number;
-    generatedBy: string;
-}
 
 export class KeyFrameTrack {
     name: string;
     times: number[];
-    values: any[];    
-    interpolation: THREE.InterpolationModes;
+    values: number[];
 }
 
 export class AnimationClip {    
     name: string;
     duration: number;
     tracks: KeyFrameTrack[];
+}
+
+export class Mesh
+{
+    name: string
+
+    offset: number[];
+    position: number[];
+    scale: number[];
+    rotation: number[];
+
+    nx: number[];
+    px: number[];
+    ny: number[];
+    py: number[];
+    nz: number[];
+    pz: number[];
+}
+
+export class CharacterModel
+{
+    name: string;
+    meshes: Mesh[];
+    clipes: AnimationClip[];
+    diffusedTex: string;
+}
+
+
+//////////////////////////////////////////////////
+export class Metadata {
+    version: number;
+    generatedBy: string;
 }
 
 export class Node {

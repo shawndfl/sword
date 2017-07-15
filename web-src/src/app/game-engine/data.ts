@@ -4,6 +4,7 @@ export class KeyFrameTrack {
     name: string;
     times: number[];
     values: number[];
+    interpolation: THREE.InterpolationModes;
 }
 
 export class AnimationClip {    

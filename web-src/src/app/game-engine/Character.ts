@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as DATA from '../game-engine/data';
+import * as G from '../game-engine/graphics';
 
 export class Character {
 
@@ -19,7 +20,7 @@ export class Character {
         // and making this json will return an object.
         loader.setResponseType('text');
         loader.load(pathToJson, (json) => {
-            var characterModel = JSON.parse(json);
+            var characterModel: DATA.CharacterModel = JSON.parse(json);
 
             this.buildFromData(characterModel);
         }, onProgress, onError);
@@ -41,7 +42,7 @@ export class Character {
                     ny: [5, 0],
                     py: [3, 0],
                     nz: [2, 0],
-                    pz: [0, 0]
+                    pz: [6, 0]
                 },
                 {
                     name: "body",
@@ -142,6 +143,7 @@ export class Character {
                     {
                         name: "lleg.position",
                         times: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             15, 15, 0,  //pivit
                             15, 15, -10,  //push                   
@@ -155,6 +157,7 @@ export class Character {
                     {
                         name: "rleg.position",
                         times: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             -15, 25, 0,   //lift           
                             -15, 25, 10,   //reach                         
@@ -168,6 +171,7 @@ export class Character {
                     {
                         name: "rarm.position",
                         times: [0.0, 0.75, 1.5, 2.25, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             -35, 50, 0,   //center
                             -35, 50, -10,   //back                         
@@ -179,6 +183,7 @@ export class Character {
                     {
                         name: "larm.position",
                         times: [0.0, 0.75, 1.5, 2.25, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             35, 50, 0,   //center
                             35, 50, 10,   //back                         
@@ -190,6 +195,7 @@ export class Character {
                     {
                         name: "head.position",
                         times: [0.0, 0.75, 1.5, 2.25, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             0, 95, 0,  //up
                             0, 90, 0,   //down
@@ -201,6 +207,7 @@ export class Character {
                     {
                         name: "rsholder.position",
                         times: [0.0, 0.75, 1.5, 2.25, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             -25, 70, 0,  //up
                             -25, 68, 0,   //down
@@ -212,12 +219,24 @@ export class Character {
                     {
                         name: "lsholder.position",
                         times: [0.0, 0.75, 1.5, 2.25, 3.0],
+                        interpolation: THREE.InterpolateLinear,
                         values: [
                             25, 68, 0,  //up
                             25, 70, 0,   //down
                             25, 68, 0,  //up
                             25, 70, 0,   //down
                             25, 68, 0,  //up
+                        ]
+                    },
+                    {
+                        name: "head.pz",
+                        times: [0.0, 2.5, 2.8, 3.0],
+                        interpolation: THREE.InterpolateDiscrete,
+                        values: [
+                            0,       //open
+                            6,       //close
+                            0,       //open   
+                            0        //open   
                         ]
                     }
                 ]
@@ -250,25 +269,21 @@ export class Character {
 
         model.meshes.forEach(meshData => {
 
-            var geo: THREE.BufferGeometry = this.buildCubeOffset(
+            var geo: G.CubeGeometry = new G.CubeGeometry(
                 meshData.offset,
                 meshData.nx,
                 meshData.px,
                 meshData.ny,
-                                meshData. py,
+                meshData.py,
                 meshData.nz,
                 meshData.pz
             );
                         
-            var mesh = new THREE.Mesh(geo, material);
-            mesh.name = meshData.name;
-            if(mesh.name == "head"){
-                console.log("head");
-                mesh
-            }
+            var mesh: G.CubeMesh = new G.CubeMesh(geo, material);
+            mesh.name = meshData.name;           
 
             mesh.position.set(meshData.position[0], meshData.position[1], meshData.position[2]);
-            mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);
+            mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);           
              
             // Add to root 
             this.root.add(mesh);
@@ -278,7 +293,7 @@ export class Character {
             model.clipes.forEach(clip => {
                 var tracks = new Array<THREE.KeyframeTrack>();
                 for (let track of clip.tracks) {
-                    var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, THREE.InterpolateLinear);
+                    var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, track.interpolation);
                     tracks.push(animationTrack);
                 }
                 this.animationClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
@@ -286,94 +301,7 @@ export class Character {
 
             this.mixer = new THREE.AnimationMixer(this.root);
 
-            this.walk();
-        
-    }
-
-    private buildCubeOffset(offset: number[],
-        nx: number[],
-        px: number[],
-        ny: number[],
-        py: number[],
-        nz: number[],
-        pz: number[])
-        : THREE.BufferGeometry {
-
-        var vertices = [
-            -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5,            //front
-            0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5,            //Left
-            0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5,        //Back
-            -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5,        //Right
-            -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5,            //Top
-            -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, -0.5         //Bottom
-        ];
-
-        //offset positions
-        for (var i = 0; i < vertices.length; i += 3) {
-            vertices[i] += offset[0];
-            vertices[i + 1] += offset[1];
-            vertices[i + 2] += offset[2];
-        }
-
-        var normals = [
-            0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-            1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-            0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
-            -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
-            0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
-            0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
-        ];
-        var s = 0.0625;
-        var tex1 = [
-            pz[0] * s, 1.0 - (pz[1] * s),
-            pz[0] * s + s, 1.0 - (pz[1] * s),
-            pz[0] * s + s, 1.0 - (pz[1] * s + s),
-            pz[0] * s, 1.0 - (pz[1] * s + s),
-
-            px[0] * s, 1.0 - (px[1] * s),
-            px[0] * s + s, 1.0 - (px[1] * s),
-            px[0] * s + s, 1.0 - (px[1] * s + s),
-            px[0] * s, 1.0 - (px[1] * s + s),
-
-            nz[0] * s, 1.0 - (nz[1] * s),
-            nz[0] * s + s, 1.0 - (nz[1] * s),
-            nz[0] * s + s, 1.0 - (nz[1] * s + s),
-            nz[0] * s, 1.0 - (nz[1] * s + s),
-
-            nx[0] * s, 1.0 - (nx[1] * s),
-            nx[0] * s + s, 1.0 - (nx[1] * s),
-            nx[0] * s + s, 1.0 - (nx[1] * s + s),
-            nx[0] * s, 1.0 - (nx[1] * s + s),
-
-            py[0] * s, 1.0 - (py[1] * s),
-            py[0] * s + s, 1.0 - (py[1] * s),
-            py[0] * s + s, 1.0 - (py[1] * s + s),
-            py[0] * s, 1.0 - (py[1] * s + s),
-
-            ny[0] * s, 1.0 - (ny[1] * s),
-            ny[0] * s + s, 1.0 - (ny[1] * s),
-            ny[0] * s + s, 1.0 - (ny[1] * s + s),
-            ny[0] * s, 1.0 - (ny[1] * s + s),
-
-        ]
-
-        var faces = [
-            0, 3, 1, 1, 3, 2,                   //Front
-            4, 7, 5, 7, 6, 5,                   //Left
-            8, 11, 9, 11, 10, 9,                //Back
-            12, 15, 13, 15, 14, 13,             //Right
-            16, 19, 17, 19, 18, 17,             //Top
-            20, 23, 21, 23, 22, 21              //Bottom
-        ]
-
-        // Load geometry
-        var geometry = new THREE.BufferGeometry();
-        geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(faces), 1));
-        geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-        geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(tex1), 2));
-        geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
-
-        return geometry;
+            this.walk();        
     }
 
     public walk() {
@@ -384,7 +312,7 @@ export class Character {
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
-    }
+    }        
 
     public update(delta: number) {
         if (this.mixer != undefined)

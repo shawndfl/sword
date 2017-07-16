@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
-import { CharacterGraphics } from '../game-engine/character';
+import { CharacterLogic } from '../game-engine/character';
 import * as DATA from '../game-engine/data';
 import * as LOADER from '../game-engine/model.loader';
 import * as THREE from 'three';
@@ -27,7 +27,7 @@ export class ScnLoaderComponent {
   light1 : THREE.PointLight;
   light2 : THREE.PointLight;
 
-  character: CharacterGraphics;
+  character: CharacterLogic;
 
   constructor() {
     this.mainTag = "mainGame";
@@ -56,8 +56,8 @@ export class ScnLoaderComponent {
     this.scene = new THREE.Scene();
     this.camera = new CameraComponent();
         
-    this.character = new CharacterGraphics();
-    this.character.buildCharacter(this.scene);    
+    this.character = new CharacterLogic();
+    this.character.initialize(this.scene);    
 
     var ambient = new THREE.AmbientLight( 0x404040 ); // soft white light
     this.scene.add( ambient );
@@ -106,11 +106,13 @@ export class ScnLoaderComponent {
   @HostListener('window:keyup', ['$event'])
   onKeyUp(key: KeyboardEvent): void {
     this.camera.keyUp(key);
+    this.character.keyUp(key);
   }
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(key: KeyboardEvent): void {
     this.camera.keyDown(key);
+    this.character.keyDown(key);
   }
 
   @HostListener('window:resize', ['$event'])

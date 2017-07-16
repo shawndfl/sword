@@ -6,8 +6,80 @@ import * as G from '../game-engine/graphics';
  * This class will be used to hold all the logic for the main character.
  * It will recive inputs from the scene and manipulate the character graphics
  */
-export class CharacterLogic
-{
+export class CharacterLogic {
+    private graphics: CharacterGraphics;
+    private walkAction: THREE.AnimationAction;
+
+    public initialize(scene: THREE.Scene) {
+        this.graphics = new CharacterGraphics();
+        this.graphics.loadModelJson(scene, "../assets/Character.json", (graphics) => {
+            //test animations
+            //this.graphics.walk();
+            this.graphics.blink();
+        });
+    }
+
+    public update(delta: number) {
+        this.graphics.update(delta);
+    }
+
+    public keyDown(key: KeyboardEvent): void {
+        console.log(key.keyCode);
+        switch (key.keyCode) {
+            case 38: //UP
+                this.walk();
+                break;
+            case 37: //LEFT
+                this.walk();
+                break;
+            case 39: //RIGHT
+                this.walk();
+                break;
+            case 40: //DOWN
+                this.walk();
+                break;
+        }
+    }
+
+    public keyUp(key: KeyboardEvent): void {
+        console.log(key.keyCode);
+        switch (key.keyCode) {
+            case 38: //UP
+                this.stop();
+                break;
+            case 37: //LEFT
+                this.stop();
+                break;
+            case 39: //RIGHT
+                this.stop();
+                break;
+            case 40: //DOWN
+                this.stop();
+                break;
+        }
+    }
+
+    private walk() {
+        if (this.walkAction == undefined) {
+            this.walkAction = this.graphics.walk();
+            this.walkAction.setEffectiveTimeScale(2.0);
+            this.walkAction.loop = true;
+            this.walkAction.setLoop(THREE.LoopRepeat, Infinity);            
+        }
+        if (!this.walkAction.paused) {
+            this.walkAction.play();
+        }
+    }
+
+    private stop() {
+        if (this.walkAction != undefined && this.walkAction.isRunning) {
+            this.walkAction.stop();
+        }
+        //var action = this.graphics.idle();
+        //action.setEffectiveTimeScale(2.0);
+        //action.loop = true;
+        //action.setLoop(THREE.LoopRepeat, Infinity);        
+    }
 
 }
 
@@ -15,13 +87,20 @@ export class CharacterGraphics {
 
     // Data
     private CharacterModel: DATA.CharacterModel;
-
     public root: THREE.Object3D;
 
     //animation 
     private mixer: THREE.AnimationMixer;
     private animationClip: { [id: string]: THREE.AnimationClip } = {};
 
+    /**
+     * Loads the meshes, animations, and textures from a json file.
+     * @param scene 
+     * @param pathToJson 
+     * @param onLoad 
+     * @param onProgress 
+     * @param onError 
+     */
     public loadModelJson(scene: THREE.Scene, pathToJson: string, onLoad?, onProgress?, onError?): void {
         var loader = new THREE.FileLoader();
 
@@ -33,13 +112,34 @@ export class CharacterGraphics {
 
             this.buildFromData(characterModel);
             scene.add(this.root);
+            onLoad(this);
         }, onProgress, onError);
     }
 
-    public buildCharacter(scene: THREE.Scene) {
-        //var model: DATA.CharacterModel =
-        this.loadModelJson(scene, "../assets/Character.json");
-        //this.buildFromData(model);
+    public walk(): THREE.AnimationAction {
+
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['walk']);
+        return action;
+    }
+
+    public idle(): THREE.AnimationAction {
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['idle']);
+        return action;
+    }
+
+    public blink() {
+
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['blink']);
+
+        action.setEffectiveTimeScale(1.0);
+        action.loop = true;
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+    }
+
+    public update(delta: number) {
+        if (this.mixer != undefined)
+            this.mixer.update(delta);
     }
 
     /**
@@ -105,10 +205,6 @@ export class CharacterGraphics {
         });
 
         this.mixer = new THREE.AnimationMixer(this.root);
-
-        //test animations
-        this.walk();
-        this.blink();
     }
 
     private convertToInterpolateMode(value: string): THREE.InterpolationModes {
@@ -129,30 +225,4 @@ export class CharacterGraphics {
         }
         return interpolation;
     }
-
-    public walk() {
-
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['walk']);
-
-        action.setEffectiveTimeScale(2.0);
-        action.loop = true;
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();
-    }
-
-    public blink() {
-
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['blink']);
-
-        action.setEffectiveTimeScale(1.0);
-        action.loop = true;
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();
-    }
-
-    public update(delta: number) {
-        if (this.mixer != undefined)
-            this.mixer.update(delta);
-    }
-
 }

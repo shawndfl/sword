@@ -94,7 +94,7 @@ export class CubeMesh extends THREE.Mesh {
    {       
        var x = Math.floor(value) % this.rowCount;
        var y = Math.floor(value / this.rowCount);
-       //console.log("Setting pz " + value +" : " + x + ", " + y);
+    
        var values = calculateUV(x, y);
        var geo: THREE.BufferGeometry = <THREE.BufferGeometry>this.geometry;
        var uvAttribute : THREE.BufferAttribute = <THREE.BufferAttribute>geo.getAttribute("uv");

@@ -11,7 +11,7 @@ export class Character {
 
     //animation 
     private mixer: THREE.AnimationMixer;
-    private animationClip: THREE.AnimationClip;
+    private animationClip: {[id: string]: THREE.AnimationClip} = {};
 
     public loadModelJson(pathToJson: string, onLoad, onProgress?, onError?): void {
         var loader = new THREE.FileLoader();
@@ -137,7 +137,7 @@ export class Character {
                 }
             ],
             clipes: [{
-                name: "Default",
+                name: "walk",
                 duration: 3.0,
                 tracks: [                    
                     {
@@ -227,10 +227,15 @@ export class Character {
                             25, 70, 0,   //down
                             25, 68, 0,  //up
                         ]
-                    },
-                    {
+                    }
+                ]
+            },
+            {
+                name: "blink",
+                duration: 5.0,
+                tracks: [  {
                         name: "head.pz",
-                        times: [0.0, 2.5, 2.8, 3.0],
+                        times: [0.0, 2.5, 2.8, 5.0],
                         interpolation: THREE.InterpolateDiscrete,
                         values: [
                             0,       //open
@@ -240,7 +245,8 @@ export class Character {
                         ]
                     }
                 ]
-            }]
+            }
+            ]
         }
 
         this.buildFromData(model);
@@ -296,19 +302,31 @@ export class Character {
                     var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, track.interpolation);
                     tracks.push(animationTrack);
                 }
-                this.animationClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+                this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
             });
 
             this.mixer = new THREE.AnimationMixer(this.root);
-
-            this.walk();        
+            
+            //test animations
+            this.walk();     
+            this.blink();
     }
 
     public walk() {
 
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip);
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['walk']);
 
         action.setEffectiveTimeScale(2.0);
+        action.loop = true;
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+    }        
+
+    public blink() {
+
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['blink']);
+
+        action.setEffectiveTimeScale(1.0);
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();

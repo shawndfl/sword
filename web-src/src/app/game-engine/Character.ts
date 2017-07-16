@@ -2,18 +2,27 @@ import * as THREE from 'three';
 import * as DATA from '../game-engine/data';
 import * as G from '../game-engine/graphics';
 
-export class Character {
+/**
+ * This class will be used to hold all the logic for the main character.
+ * It will recive inputs from the scene and manipulate the character graphics
+ */
+export class CharacterLogic
+{
+
+}
+
+export class CharacterGraphics {
 
     // Data
-    private CharacterModel: DATA.CharacterModel;   
+    private CharacterModel: DATA.CharacterModel;
 
     public root: THREE.Object3D;
 
     //animation 
     private mixer: THREE.AnimationMixer;
-    private animationClip: {[id: string]: THREE.AnimationClip} = {};
+    private animationClip: { [id: string]: THREE.AnimationClip } = {};
 
-    public loadModelJson(pathToJson: string, onLoad, onProgress?, onError?): void {
+    public loadModelJson(scene: THREE.Scene, pathToJson: string, onLoad?, onProgress?, onError?): void {
         var loader = new THREE.FileLoader();
 
         // Cannot use json because the onLoad method expects a string 
@@ -23,235 +32,21 @@ export class Character {
             var characterModel: DATA.CharacterModel = JSON.parse(json);
 
             this.buildFromData(characterModel);
+            scene.add(this.root);
         }, onProgress, onError);
     }
 
-    public buildCharacter() {
-        var model: DATA.CharacterModel = {
-            name: "main",
-            diffusedTex: "assets/face.png",
-            meshes: [
-                {
-                    name: "head",
-                    offset: [0, 0, 0],
-                    position: [0, 95, 0],
-                    scale: [20, 20, 15],
-                    rotation: [0, 0, 0],
-                    nx: [4, 0],
-                    px: [1, 0],
-                    ny: [5, 0],
-                    py: [3, 0],
-                    nz: [2, 0],
-                    pz: [6, 0]
-                },
-                {
-                    name: "body",
-                    offset: [0, 0, 0],
-                    position: [0, 60, 0],
-                    scale: [30, 30, 15],
-                    rotation: [0, 0, 0],
-                    nx: [1, 1],
-                    px: [1, 1],
-                    ny: [1, 1],
-                    py: [5, 0],
-                    nz: [1, 1],
-                    pz: [0, 1]
-                },
-                {
-                    name: "lsholder",
-                    offset: [0, 0, 0],
-                    position: [25, 70, 0],
-                    scale: [20, 10, 15],
-                    rotation: [0, 0, 0],
-                    nx: [1, 1],
-                    px: [1, 1],
-                    ny: [1, 1],
-                    py: [1, 1],
-                    nz: [1, 1],
-                    pz: [1, 1]
-                },
-                {
-                    name: "rsholder",
-                    offset: [0, 0, 0],
-                    position: [-25, 70, 0],
-                    scale: [20, 10, 15],
-                    rotation: [0, 0, 0],
-                    nx: [1, 1],
-                    px: [1, 1],
-                    ny: [1, 1],
-                    py: [1, 1],
-                    nz: [1, 1],
-                    pz: [1, 1]
-                },
-                {
-                    name: "larm",
-                    offset: [0, 0, 0],
-                    position: [35, 50, 0],
-                    scale: [20, 20, 20],
-                    rotation: [0, 0, 0],
-                    nx: [5, 1],
-                    px: [5, 1],
-                    ny: [4, 1],
-                    py: [1, 1],
-                    nz: [5, 1],
-                    pz: [5, 1]
-                },
-                 {
-                    name: "rarm",
-                    offset: [0, 0, 0],
-                    position: [-35, 50, 0],
-                    scale: [20, 20, 20],
-                    rotation: [0, 0, 0],
-                    nx: [5, 1],
-                    px: [5, 1],
-                    ny: [4, 1],
-                    py: [1, 1],
-                    nz: [5, 1],
-                    pz: [5, 1]
-                },
-                 {
-                    name: "lleg",
-                    offset: [0, 0, 0],
-                    position: [15, 15, 0],
-                    scale: [20, 30, 20],
-                    rotation: [0, 0, 0],
-                    nx: [1, 2],
-                    px: [1, 2],
-                    ny: [0, 1],
-                    py: [1, 1],
-                    nz: [1, 2],
-                    pz: [1, 2]
-                },
-                {
-                    name: "rleg",
-                    offset: [0, 0, 0],
-                    position: [-15, 15, 0],
-                    scale: [20, 30, 20],
-                    rotation: [0, 0, 0],
-                    nx: [1, 2],
-                    px: [1, 2],
-                    ny: [0, 1],
-                    py: [1, 1],
-                    nz: [1, 2],
-                    pz: [1, 2]
-                }
-            ],
-            clipes: [{
-                name: "walk",
-                duration: 3.0,
-                tracks: [                    
-                    {
-                        name: "lleg.position",
-                        times: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            15, 15, 0,  //pivit
-                            15, 15, -10,  //push                   
-                            15, 25, -10,  //lift                   
-                            15, 25, 0,   //reach
-                            15, 25, 10,   //reach                   
-                            15, 15, 10,  //plant
-                            15, 15, 0    //pull                   
-                        ]
-                    },
-                    {
-                        name: "rleg.position",
-                        times: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            -15, 25, 0,   //lift           
-                            -15, 25, 10,   //reach                         
-                            -15, 15, 10,  //plant
-                            -15, 15, 0,    //pull 
-                            -15, 15, -10, //push          
-                            -15, 25, -10,   //lift
-                            -15, 25, 0    //reach
-                        ]
-                    },
-                    {
-                        name: "rarm.position",
-                        times: [0.0, 0.75, 1.5, 2.25, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            -35, 50, 0,   //center
-                            -35, 50, -10,   //back                         
-                            -35, 50, 0,  //center
-                            -35, 50, 10,    //forward
-                            -35, 50, 0 //center                         
-                        ]
-                    },
-                    {
-                        name: "larm.position",
-                        times: [0.0, 0.75, 1.5, 2.25, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            35, 50, 0,   //center
-                            35, 50, 10,   //back                         
-                            35, 50, 0,  //center
-                            35, 50, -10,    //forward
-                            35, 50, 0 //center                         
-                        ]
-                    },
-                    {
-                        name: "head.position",
-                        times: [0.0, 0.75, 1.5, 2.25, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            0, 95, 0,  //up
-                            0, 90, 0,   //down
-                            0, 95, 0,  //up
-                            0, 90, 0,   //down
-                            0, 95, 0,  //up
-                        ]
-                    },
-                    {
-                        name: "rsholder.position",
-                        times: [0.0, 0.75, 1.5, 2.25, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            -25, 70, 0,  //up
-                            -25, 68, 0,   //down
-                            -25, 70, 0,  //up
-                            -25, 68, 0,   //down
-                            -25, 70, 0,  //up
-                        ]
-                    },
-                    {
-                        name: "lsholder.position",
-                        times: [0.0, 0.75, 1.5, 2.25, 3.0],
-                        interpolation: THREE.InterpolateLinear,
-                        values: [
-                            25, 68, 0,  //up
-                            25, 70, 0,   //down
-                            25, 68, 0,  //up
-                            25, 70, 0,   //down
-                            25, 68, 0,  //up
-                        ]
-                    }
-                ]
-            },
-            {
-                name: "blink",
-                duration: 5.0,
-                tracks: [  {
-                        name: "head.pz",
-                        times: [0.0, 2.5, 2.8, 5.0],
-                        interpolation: THREE.InterpolateDiscrete,
-                        values: [
-                            0,       //open
-                            6,       //close
-                            0,       //open   
-                            0        //open   
-                        ]
-                    }
-                ]
-            }
-            ]
-        }
-
-        this.buildFromData(model);
+    public buildCharacter(scene: THREE.Scene) {
+        //var model: DATA.CharacterModel =
+        this.loadModelJson(scene, "../assets/Character.json");
+        //this.buildFromData(model);
     }
 
+    /**
+     * builds a mesh from json data. This mesh will share the same material and texture.
+     * It will load in animations too.
+     * @param model 
+     */
     private buildFromData(model: DATA.CharacterModel) {
         this.root = new THREE.Object3D();
         this.root.name = model.name;
@@ -273,6 +68,7 @@ export class Character {
         material.map = diffused;
         material.wireframe = false;
 
+        //Load in all meshes that make up this model
         model.meshes.forEach(meshData => {
 
             var geo: G.CubeGeometry = new G.CubeGeometry(
@@ -284,32 +80,54 @@ export class Character {
                 meshData.nz,
                 meshData.pz
             );
-                        
+
             var mesh: G.CubeMesh = new G.CubeMesh(geo, material);
-            mesh.name = meshData.name;           
+            mesh.name = meshData.name;
 
             mesh.position.set(meshData.position[0], meshData.position[1], meshData.position[2]);
-            mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);           
-             
+            mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);
+
             // Add to root 
             this.root.add(mesh);
 
         });
 
-            model.clipes.forEach(clip => {
-                var tracks = new Array<THREE.KeyframeTrack>();
-                for (let track of clip.tracks) {
-                    var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, track.interpolation);
-                    tracks.push(animationTrack);
-                }
-                this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
-            });
+        //Process all animation clips
+        model.clipes.forEach(clip => {
+            var tracks = new Array<THREE.KeyframeTrack>();
+            for (let track of clip.tracks) {
 
-            this.mixer = new THREE.AnimationMixer(this.root);
-            
-            //test animations
-            this.walk();     
-            this.blink();
+                var interpolation: THREE.InterpolationModes = this.convertToInterpolateMode(track.interpolation);
+                var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, interpolation);
+                tracks.push(animationTrack);
+            }
+            this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+        });
+
+        this.mixer = new THREE.AnimationMixer(this.root);
+
+        //test animations
+        this.walk();
+        this.blink();
+    }
+
+    private convertToInterpolateMode(value: string): THREE.InterpolationModes {
+        var interpolation: THREE.InterpolationModes;
+
+        switch (value) {
+            case "InterpolateDiscrete":
+                interpolation = THREE.InterpolateDiscrete;
+                break;
+            case "InterpolateLinear":
+                interpolation = THREE.InterpolateLinear;
+                break;
+            case "InterpolateSmooth":
+                interpolation = THREE.InterpolateSmooth;
+                break;
+            default:
+                interpolation = THREE.InterpolateLinear;
+        }
+        return interpolation;
     }
 
     public walk() {
@@ -320,7 +138,7 @@ export class Character {
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
-    }        
+    }
 
     public blink() {
 
@@ -330,7 +148,7 @@ export class Character {
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
-    }        
+    }
 
     public update(delta: number) {
         if (this.mixer != undefined)

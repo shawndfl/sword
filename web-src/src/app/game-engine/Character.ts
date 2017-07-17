@@ -9,62 +9,91 @@ import * as G from '../game-engine/graphics';
 export class CharacterLogic {
     private graphics: CharacterGraphics;
     private walkAction: THREE.AnimationAction;
+    private rotateAngel: number = 0;
+    private moveSpeed: number = 0;
+    private ready: boolean = false;
 
     public initialize(scene: THREE.Scene) {
         this.graphics = new CharacterGraphics();
-        this.graphics.loadModelJson(scene, "../assets/Character.json", (graphics) => {
-            //test animations
-            //this.graphics.walk();
+        this.graphics.loadModelJson(scene, "../assets/Character.json", (graphics) => {          
             this.graphics.blink();
+            this.ready = true;
         });
     }
 
     public update(delta: number) {
-        this.graphics.update(delta);
+        if (this.ready) {
+            this.graphics.update(delta);
+            this.move();
+        }
     }
 
     public keyDown(key: KeyboardEvent): void {
-        console.log(key.keyCode);
         switch (key.keyCode) {
             case 38: //UP
                 this.walk();
+                this.moveSpeed = 2.0;
                 break;
             case 37: //LEFT
                 this.walk();
+                this.rotateAngel = 0.1;
                 break;
             case 39: //RIGHT
                 this.walk();
+                this.rotateAngel = -0.1;
                 break;
             case 40: //DOWN
                 this.walk();
+                this.moveSpeed = -2.0;
                 break;
         }
     }
 
     public keyUp(key: KeyboardEvent): void {
-        console.log(key.keyCode);
         switch (key.keyCode) {
             case 38: //UP
                 this.stop();
+                this.moveSpeed = 0.0;
                 break;
             case 37: //LEFT
                 this.stop();
+                this.rotateAngel = 0;
                 break;
             case 39: //RIGHT
                 this.stop();
+                this.rotateAngel = 0;
                 break;
             case 40: //DOWN
                 this.stop();
+                this.moveSpeed = 0.0;
                 break;
         }
     }
 
+    private move() {
+        if (this.rotateAngel != 0) {
+            var axis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+            this.graphics.root.rotateOnAxis(axis, this.rotateAngel);            
+        }
+        
+        if (this.moveSpeed != 0) {            
+            var direction: THREE.Vector3 = new THREE.Vector3();
+            var up: THREE.Vector3 = new THREE.Vector3();
+            var right: THREE.Vector3 = new THREE.Vector3();
+            this.graphics.root.matrix.extractBasis(right, up, direction);
+     
+            var current: THREE.Vector3 = this.graphics.root.position;
+            var newPos = current.addVectors(current, direction.multiplyScalar(this.moveSpeed));
+            this.graphics.root.position.set(newPos.x, newPos.y, newPos.z);            
+        }                
+    }   
+
     private walk() {
         if (this.walkAction == undefined) {
             this.walkAction = this.graphics.walk();
-            this.walkAction.setEffectiveTimeScale(2.0);
+            this.walkAction.setEffectiveTimeScale(2.5);
             this.walkAction.loop = true;
-            this.walkAction.setLoop(THREE.LoopRepeat, Infinity);            
+            this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
         }
         if (!this.walkAction.paused) {
             this.walkAction.play();

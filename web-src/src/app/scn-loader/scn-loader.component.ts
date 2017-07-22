@@ -1,8 +1,8 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
 import { CharacterLogic } from '../game-engine/character';
+import { Environment } from '../game-engine/environment';
 import * as DATA from '../game-engine/data';
-import * as LOADER from '../game-engine/model.loader';
 import * as THREE from 'three';
 
 @Component({
@@ -13,21 +13,14 @@ import * as THREE from 'three';
 export class ScnLoaderComponent {
 
   scene: THREE.Scene;
-  camera: CameraComponent;
+  flyCamera: CameraComponent;
   renderer: THREE.WebGLRenderer;
   mainTag: string;
-
-  mixer: THREE.AnimationMixer;
-  clock: THREE.Clock;
-
-  model: LOADER.ModelLoader
-
-  ready: boolean = false;
-
-  light1 : THREE.PointLight;
-  light2 : THREE.PointLight;
+  
+  clock: THREE.Clock;  
 
   character: CharacterLogic;
+  environment: Environment;
 
   constructor() {
     this.mainTag = "mainGame";
@@ -38,55 +31,31 @@ export class ScnLoaderComponent {
     this.render();
   }
 
-  private BuildSampleModel(scene: THREE.Scene): void {   
-
-    // Create the mesh
-    this.model = new LOADER.ModelLoader();    
-
-    var mesh = this.model.loadModelJson("assets/Character.json", function (mesh: THREE.Mesh) {
-      //mesh.rotation.y = Math.PI/2.0;
-      // Add the mesh to the scene
-      scene.add(mesh);
-    });
-  }
-
   public init() {
 
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
-    this.camera = new CameraComponent();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+    this.flyCamera = new CameraComponent(camera);        
         
     this.character = new CharacterLogic();
     this.character.initialize(this.scene);    
 
-    var ambient = new THREE.AmbientLight( 0x404040 ); // soft white light
-    this.scene.add( ambient );
+    this.environment = new Environment();
+    this.environment.initialize(this.scene);
 
-    var sphere = new THREE.SphereGeometry( 0.5, 16, 8 );
-
-    this.light1 = new THREE.PointLight( 0xffffff, .5, 10 );		
-    this.light1.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
-    this.light1.position.x = 40;
-    this.light1.position.y = 40;
-    this.light1.position.x = 40;
-		this.scene.add( this.light1 );
-
-    this.light2 = new THREE.PointLight( 0xffffff, .5, 10 );
-    this.light2.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xffff00 } ) ) );		
-    this.light2.position.x = -40;
-    this.light2.position.y = -40;
-    this.light2.position.x = -40;    
-		this.scene.add( this.light2 );
+    var ambient = new THREE.AmbientLight( 0x909090 ); // soft white light
+    this.scene.add( ambient );    
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.getElementById(this.mainTag).appendChild(this.renderer.domElement);
 
-    var gridHelper = new THREE.GridHelper(1000, 100, 0x0000ff, 0x808080);
-    gridHelper.position.y = 0;
-    gridHelper.position.x = 0;
-    this.scene.add(gridHelper);
+    //var gridHelper = new THREE.GridHelper(1000, 100, 0x0000ff, 0x808080);
+    //gridHelper.position.y = 0;
+    //gridHelper.position.x = 0;
+    //this.scene.add(gridHelper);
 
     document.addEventListener('mousedown', () => this.onMouseOver, false);
     document.addEventListener('mouseMove', this.onMouseMove, false);
@@ -95,49 +64,39 @@ export class ScnLoaderComponent {
 
   @HostListener('window:mouseover', ['$event'])
   onMouseOver(mouse: MouseEvent): void {
-    this.camera.over(mouse);
+    this.flyCamera.over(mouse);
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(mouse: MouseEvent): void {
-    this.camera.move(mouse);
+    this.flyCamera.move(mouse);
   }
 
   @HostListener('window:keyup', ['$event'])
   onKeyUp(key: KeyboardEvent): void {
-    this.camera.keyUp(key);
+    this.flyCamera.keyUp(key);
     this.character.keyUp(key);
   }
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(key: KeyboardEvent): void {
-    this.camera.keyDown(key);
+    this.flyCamera.keyDown(key);
     this.character.keyDown(key);
   }
 
   @HostListener('window:resize', ['$event'])
   onWindowResize(event) {
-    this.camera.resize(event.target.innerWidth, event.target.innerHeight);
+    this.flyCamera.resize(event.target.innerWidth, event.target.innerHeight);
     this.renderer.setSize(event.target.innerWidth, event.target.innerHeight);
     return true;
   }
 
   public render() {
     requestAnimationFrame(() => this.render());
-    //this.model.update(this.clock.getDelta())
+
     this.character.update(this.clock.getDelta());
 
-    this.renderer.render(this.scene, this.camera.camera);
-
-    var time = Date.now() * 0.0005;
-
-    this.light1.position.x = Math.sin( time * 0.7 ) * 50 + 20;
-		this.light1.position.y = 30;//Math.cos( time * 0.5 ) * 70 + 20;
-		this.light1.position.z = Math.cos( time * 0.3 ) * 70 + 20;
-		this.light2.position.x = Math.cos( time * 0.3 ) * 70 + 20;
-		this.light2.position.y = Math.sin( time * 0.5 ) * 70 + 20;
-		this.light2.position.z = Math.sin( time * 0.7 ) * 70 + 20;
-
+    this.renderer.render(this.scene, this.flyCamera.camera);    
 
   }
 

@@ -15,7 +15,7 @@ export class CharacterLogic {
 
     public initialize(scene: THREE.Scene) {
         this.graphics = new CharacterGraphics();
-        this.graphics.loadModelJson(scene, "../assets/Character.json", (graphics) => {          
+        this.graphics.loadModelJson(scene, "../assets/character.json", (graphics) => {          
             this.graphics.blink();
             this.ready = true;
         });

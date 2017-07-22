@@ -1,4 +1,4 @@
- {
+  {
     "name": "character",
     "diffusedTex": "assets/face.png",
     "meshes": [
@@ -203,10 +203,10 @@
     },
     {
         "name": "blink",
-        "duration": 5.0,
+        "duration": 3.0,
         "tracks": [  {
                 "name": "head.pz",
-                "times": [0.0, 2.5, 2.8, 5.0],
+                "times": [0.0, 2.5, 2.8, 3.0],
                 "interpolation": "InterpolateDiscrete",
                 "values": [
                     0,       

@@ -27,7 +27,8 @@ export class ScnCubeComponent implements OnInit {
   public init() {
 
     this.scene = new THREE.Scene();
-    this.camera = new CameraComponent();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+    this.camera = new CameraComponent(camera);
 
     var geometry = new THREE.BoxGeometry(20, 20, 20);
     var material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false });

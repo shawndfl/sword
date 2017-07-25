@@ -50,6 +50,7 @@ export class CameraComponent {
   }
 
   private lookatForCamera(xAxis: THREE.Vector3, yAxis: THREE.Vector3, zAxis: THREE.Vector3, eye: THREE.Vector3): void {
+    this.position = eye;
     this.camera.matrix.makeBasis(xAxis, yAxis, zAxis);
     this.camera.matrix.setPosition(eye);
     this.camera.matrixAutoUpdate = false;
@@ -74,8 +75,8 @@ export class CameraComponent {
       this.updateCamera();
       this.freeCamera = true;
     }
-    else{
-       this.freeCamera = false;
+    else {
+      this.freeCamera = false;
     }
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
@@ -124,37 +125,102 @@ export class CameraComponent {
     }
   }
 
-  keyUp(key: KeyboardEvent): void {     
+  keyUp(key: KeyboardEvent): void {
   }
 
-  public FollowTarget(target: THREE.Object3D) {
+  private targetObject: THREE.Object3D;
+  private lastTargetPos: THREE.Vector3;
+  private fullSpeedCount: number = 0;
 
+
+  /**
+   * Set the target for the camera to follow.
+   * @param target 
+   */
+  public setTarget(target: THREE.Object3D) {
+    this.targetObject = target;
+    this.lastTargetPos = this.targetObject.getWorldPosition();
+  }
+
+  public update(delta: number) {
     if (this.freeCamera)
       return;
 
-    var distanceMax = 300.0;
+    var followSpeed = 5.0;
+    var distanceMax = 360.0;
+    var distanceMin = 360.0;
     var height = 120;
+    var closeEnough = 100.0;
+    var maxTargetMovement = 1;
+
+    //how many frames has the target been moving at fullspeed
+    var maxFullSpeedCount = 50;
+
     var heightVector = new THREE.Vector3(0, height, 0);
+    var targetOffset = new THREE.Vector3(0, 100, 0);
 
-    var distance = this.position.distanceTo(target.getWorldPosition());
-    if (distance > distanceMax) {
-      this.position = target.getWorldDirection().multiplyScalar(-distanceMax).
-        add(target.getWorldPosition()).
-        add(heightVector);
+    var targetPos = this.targetObject.getWorldPosition();
+    targetPos.add(targetOffset);
 
+    var targetDirection = this.targetObject.getWorldDirection();
+    var idealCamPos = targetDirection.multiplyScalar(-distanceMin)
+      .add(targetPos)
+      .add(heightVector);
+
+    //is the target moving a lot?
+    var targetMovementChange = this.targetObject.getWorldPosition().distanceTo(this.lastTargetPos);
+    if (targetMovementChange > maxTargetMovement) {
+      this.fullSpeedCount++;
+    }
+    else {
+      this.fullSpeedCount = 0;
+    }
+
+    //If the target is moving at full speed for a while 
+    //don't animate just lock on to the target
+    if (this.fullSpeedCount > maxFullSpeedCount) {
       var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
       var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
       var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
 
-      look = look.subVectors(this.position, target.position);
+      look = look.subVectors(this.position, targetPos);
       look.normalize();
       right.crossVectors(up, look);
       right.normalize();
       up.crossVectors(look, right);
       up.normalize();
 
-      this.lookatForCamera(right, up, look, this.position);
+      this.lookatForCamera(right, up, look, idealCamPos);
+
+    //not moving at full speed animate the camera
+    } else {
+
+      var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
+      var speed = followSpeed;
+      velocity.normalize();
+      velocity.multiplyScalar(followSpeed);
+      var newPos = new THREE.Vector3().addVectors(this.position, velocity);
+      var currentDist = newPos.distanceTo(idealCamPos);
+
+      if (currentDist > closeEnough) {
+
+        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+        var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+        var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+        look = look.subVectors(this.position, targetPos);
+        look.normalize();
+        right.crossVectors(up, look);
+        right.normalize();
+        up.crossVectors(look, right);
+        up.normalize();
+
+        this.lookatForCamera(right, up, look, newPos);
+      }
     }
+
+    this.lastTargetPos = this.targetObject.getWorldPosition();
+
   }
 
   public resize(width: number, height: number): void {

@@ -36,11 +36,13 @@ export class ScnLoaderComponent {
 
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-    this.flyCamera = new CameraComponent(camera);
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);   
 
     this.character = new CharacterLogic();
     this.character.initialize(this.scene);
+
+    this.flyCamera = new CameraComponent(camera);
+    this.flyCamera.setTarget(this.character.graphics);
 
     this.environment = new Environment();
     this.environment.initialize(this.scene);
@@ -75,7 +77,7 @@ export class ScnLoaderComponent {
 
     var meshTest = new THREE.Mesh(geo.build(),material);
     meshTest.scale.set(40, 40, 40);
-    meshTest.position.set(0, 0, 0);
+    meshTest.position.set(0, 0, 20);
 
     this.scene.add(meshTest);
 
@@ -116,9 +118,9 @@ export class ScnLoaderComponent {
 
   public render() {
     requestAnimationFrame(() => this.render());
-
-    this.flyCamera.FollowTarget(this.character.graphics)
-    this.character.update(this.clock.getDelta());
+    var delta = this.clock.getDelta();
+    this.flyCamera.update(delta);
+    this.character.update(delta);
 
     this.renderer.render(this.scene, this.flyCamera.camera);
 

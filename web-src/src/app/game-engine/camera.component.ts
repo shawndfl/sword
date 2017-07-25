@@ -131,7 +131,7 @@ export class CameraComponent {
   private targetObject: THREE.Object3D;
   private lastTargetPos: THREE.Vector3;
   private fullSpeedCount: number = 0;
-
+  private closeEnough: boolean = false;
 
   /**
    * Set the target for the camera to follow.
@@ -150,11 +150,11 @@ export class CameraComponent {
     var distanceMax = 360.0;
     var distanceMin = 360.0;
     var height = 120;
-    var closeEnough = 100.0;
+    var closeEnoughLimit = 10.0;
     var maxTargetMovement = 1;
 
     //how many frames has the target been moving at fullspeed
-    var maxFullSpeedCount = 50;
+    var maxFullSpeedCount = 5;
 
     var heightVector = new THREE.Vector3(0, height, 0);
     var targetOffset = new THREE.Vector3(0, 100, 0);
@@ -167,6 +167,13 @@ export class CameraComponent {
       .add(targetPos)
       .add(heightVector);
 
+    var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
+    var speed = followSpeed;
+    velocity.normalize();
+    velocity.multiplyScalar(followSpeed);
+    var newPos = new THREE.Vector3().addVectors(this.position, velocity);
+    var currentDist = newPos.distanceTo(idealCamPos);
+
     //is the target moving a lot?
     var targetMovementChange = this.targetObject.getWorldPosition().distanceTo(this.lastTargetPos);
     if (targetMovementChange > maxTargetMovement) {
@@ -178,7 +185,7 @@ export class CameraComponent {
 
     //If the target is moving at full speed for a while 
     //don't animate just lock on to the target
-    if (this.fullSpeedCount > maxFullSpeedCount) {
+    if (this.fullSpeedCount > maxFullSpeedCount && this.closeEnough) {
       var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
       var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
       var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
@@ -192,31 +199,25 @@ export class CameraComponent {
 
       this.lookatForCamera(right, up, look, idealCamPos);
 
-    //not moving at full speed animate the camera
+      //not moving at full speed animate the camera
+    } else if (currentDist > closeEnoughLimit) {
+
+      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+      var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+      var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+      look = look.subVectors(this.position, targetPos);
+      look.normalize();
+      right.crossVectors(up, look);
+      right.normalize();
+      up.crossVectors(look, right);
+      up.normalize();
+
+      this.lookatForCamera(right, up, look, newPos);
+      this.closeEnough = false;
+      
     } else {
-
-      var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
-      var speed = followSpeed;
-      velocity.normalize();
-      velocity.multiplyScalar(followSpeed);
-      var newPos = new THREE.Vector3().addVectors(this.position, velocity);
-      var currentDist = newPos.distanceTo(idealCamPos);
-
-      if (currentDist > closeEnough) {
-
-        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
-        var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-        var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-
-        look = look.subVectors(this.position, targetPos);
-        look.normalize();
-        right.crossVectors(up, look);
-        right.normalize();
-        up.crossVectors(look, right);
-        up.normalize();
-
-        this.lookatForCamera(right, up, look, newPos);
-      }
+      this.closeEnough = true;
     }
 
     this.lastTargetPos = this.targetObject.getWorldPosition();

@@ -12,6 +12,8 @@ export class CharacterLogic {
     private rotateAngel: number = 0;
     private moveSpeed: number = 0;
     private ready: boolean = false;
+    private speed: number = 5.0;
+    private rotateSpeed: number = .05;
 
     public get graphics() : CharacterGraphics {
         return this._graphics;
@@ -36,16 +38,16 @@ export class CharacterLogic {
     public keyDown(key: KeyboardEvent): void {
         switch (key.keyCode) {
             case 38: //UP
-                this.moveSpeed = 2.0;
+                this.moveSpeed = this.speed;
                 break;
             case 37: //LEFT                
-                this.rotateAngel = 0.1;
+                this.rotateAngel = this.rotateSpeed;
                 break;
             case 39: //RIGHT                
-                this.rotateAngel = -0.1;
+                this.rotateAngel = -this.rotateSpeed;
                 break;
             case 40: //DOWN                
-                this.moveSpeed = -2.0;
+                this.moveSpeed = -this.speed;
                 break;
         }
     }

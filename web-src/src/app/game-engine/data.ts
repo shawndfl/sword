@@ -17,8 +17,8 @@ export class AnimationClip {
 
 export class Mesh
 {
-    name: string
-
+    name: string;
+    parent: string;
     offset: number[];
     position: number[];
     scale: number[];

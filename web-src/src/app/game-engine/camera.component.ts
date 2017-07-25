@@ -9,6 +9,7 @@ export class CameraComponent {
   private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
   private readonly TwoPi: number = Math.PI * 2.0;
 
+  private freeCamera = false;
   public get camera(): THREE.PerspectiveCamera {
     return this._camera;
   }
@@ -27,7 +28,7 @@ export class CameraComponent {
    */
   public position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
 
-  constructor(camera: THREE.PerspectiveCamera) {        
+  constructor(camera: THREE.PerspectiveCamera) {
     this._camera = camera;
     this.updateCamera();
   }
@@ -71,6 +72,10 @@ export class CameraComponent {
       this.angle.y += deltaY;
 
       this.updateCamera();
+      this.freeCamera = true;
+    }
+    else{
+       this.freeCamera = false;
     }
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
@@ -119,7 +124,37 @@ export class CameraComponent {
     }
   }
 
-  keyUp(key: KeyboardEvent): void {
+  keyUp(key: KeyboardEvent): void {     
+  }
+
+  public FollowTarget(target: THREE.Object3D) {
+
+    if (this.freeCamera)
+      return;
+
+    var distanceMax = 300.0;
+    var height = 120;
+    var heightVector = new THREE.Vector3(0, height, 0);
+
+    var distance = this.position.distanceTo(target.getWorldPosition());
+    if (distance > distanceMax) {
+      this.position = target.getWorldDirection().multiplyScalar(-distanceMax).
+        add(target.getWorldPosition()).
+        add(heightVector);
+
+      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+      var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+      var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+      look = look.subVectors(this.position, target.position);
+      look.normalize();
+      right.crossVectors(up, look);
+      right.normalize();
+      up.crossVectors(look, right);
+      up.normalize();
+
+      this.lookatForCamera(right, up, look, this.position);
+    }
   }
 
   public resize(width: number, height: number): void {

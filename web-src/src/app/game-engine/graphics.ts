@@ -51,11 +51,6 @@ export class TerrainGeometry extends THREE.BufferGeometry {
                 //calculate uv textures
                 calculateUV(0, 0).forEach(num => { tex1.push(num) });
 
-                //calculate normals
-                //var normal = [-axis, axis,  0] ;
-                //var normal = [ axis, axis,  0] ;
-                //var normal = [0,     axis,  axis] ;
-                //var normal = [0,     axis, -axis] ;
                 var normal = [0, 1, 0];
 
                 //same normal for all 4 verts
@@ -203,7 +198,7 @@ export class CubeGeometry extends THREE.BufferGeometry {
         super();
 
         var vertices = [
-            -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5,            //front
+            -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5,            //Front
             0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5,            //Left
             0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5,        //Back
             -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5,        //Right
@@ -213,18 +208,18 @@ export class CubeGeometry extends THREE.BufferGeometry {
 
         //offset positions
         for (var i = 0; i < vertices.length; i += 3) {
-            vertices[i] += offset[0];
+            vertices[i + 0] += offset[0];
             vertices[i + 1] += offset[1];
             vertices[i + 2] += offset[2];
         }
 
         var normals = [
-            0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-            1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-            0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
-            -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
-            0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
-            0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
+            0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,                 //Front
+            1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,                 //Left
+            0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,             //Back
+            -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,             //Right
+            0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,                 //Top
+            0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0              //Bottom
         ];
 
         var tex1 = [];
@@ -236,7 +231,7 @@ export class CubeGeometry extends THREE.BufferGeometry {
         calculateUV(ny[0], ny[1]).forEach(num => { tex1.push(num) });
 
         var faces = [
-            0, 3, 1, 1, 3, 2,                   //Front
+            0, 3, 1, 3, 2, 1,                   //Front
             4, 7, 5, 7, 6, 5,                   //Left
             8, 11, 9, 11, 10, 9,                //Back
             12, 15, 13, 15, 14, 13,             //Right
@@ -251,6 +246,143 @@ export class CubeGeometry extends THREE.BufferGeometry {
     }
 }
 
+export class GeoBuilder {
+    private vertices: number[] = [];
+    private tex1: number[] = [];
+    private normals: number[] = [];
+    private faces: number[] = [];
+    private _offset: number[] = [0, 0, 0];
+    private negate: boolean;
+
+    public offset(x, y, z): GeoBuilder {
+        this._offset[0] = x; this._offset[1] = y; this._offset[2] = z;
+        return this;
+    }
+
+    public faceOut(): GeoBuilder {
+        this.negate = false;
+        return this;
+    }
+    public faceIn() :  GeoBuilder {
+        this.negate = true;
+        return this;
+    }
+    public nx(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push(-0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+             if(this.negate)
+                this.vertices[i + 0] = -this.vertices[i + 0];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];           
+
+        }
+        this.normals.push(-1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public px(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push(0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+            if(this.negate)
+                this.vertices[i + 0] = -this.vertices[i + 0];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];            
+        }
+        this.normals.push(1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public ny(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push(-0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, -0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+             if(this.negate)
+                this.vertices[i + 1] = -this.vertices[i + 1];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];           
+        }
+        this.normals.push(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public py(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push( -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+            if(this.negate)
+                this.vertices[i + 1] = -this.vertices[i + 1];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];            
+        }
+        this.normals.push( 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public nz(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push(0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+            if(this.negate)
+                this.vertices[i + 2] = -this.vertices[i + 2];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];            
+        }
+        this.normals.push(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public pz(u, v): GeoBuilder {
+        var start = this.vertices.length;
+        this.vertices.push(-0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5);
+        for (var i = start; i < this.vertices.length; i += 3) {
+            if(this.negate)
+                this.vertices[i + 2] = -this.vertices[i + 2];
+            this.vertices[i + 0] += this._offset[0];
+            this.vertices[i + 1] += this._offset[1];
+            this.vertices[i + 2] += this._offset[2];            
+        }
+        this.normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
+        calculateUV(u, v).forEach(num => { this.tex1.push(num) });
+        var s = start / 3;        
+        this.faces.push(s + 0, s + 3, s + 1, s + 3, s + 2, s + 1);
+        return this;
+    }
+
+    public build(): THREE.BufferGeometry {
+        var buffer = new THREE.BufferGeometry();
+
+        buffer.setIndex(new THREE.BufferAttribute(new Uint16Array(this.faces), 1));
+        buffer.addAttribute('position', new THREE.BufferAttribute(new Float32Array(this.vertices), 3));
+        buffer.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(this.tex1), 2));
+        buffer.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(this.normals), 3));
+        return buffer;
+    }
+
+}
+
+
 export class CubeMesh extends THREE.Mesh {
     private pzOffset: number = 8 * 0;
     private pxOffset: number = 8 * 1;
@@ -261,6 +393,7 @@ export class CubeMesh extends THREE.Mesh {
 
     private rowCount = 16;
 
+    // Used to animate the diffused texture
     get pz(): number {
 
         var geo: THREE.BufferGeometry = <THREE.BufferGeometry>this.geometry;
@@ -270,6 +403,7 @@ export class CubeMesh extends THREE.Mesh {
         return index;
     }
 
+    // Used to animate the diffused texture
     set pz(value: number) {
         var x = Math.floor(value) % this.rowCount;
         var y = Math.floor(value / this.rowCount);
@@ -280,9 +414,14 @@ export class CubeMesh extends THREE.Mesh {
         uvAttribute.needsUpdate = true;
         uvAttribute.set(values, this.pzOffset);
     }
+    //TODO Add properties for the other 5 faces of the cube
 
     public constructor(geometry: CubeGeometry, material: THREE.Material) {
         super(geometry, material);
     }
 }
 
+
+export class Sword extends THREE.Mesh {
+
+}

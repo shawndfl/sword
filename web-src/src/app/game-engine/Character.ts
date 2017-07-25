@@ -7,16 +7,21 @@ import * as G from '../game-engine/graphics';
  * It will recive inputs from the scene and manipulate the character graphics
  */
 export class CharacterLogic {
-    private graphics: CharacterGraphics;
+    private _graphics: CharacterGraphics;
     private walkAction: THREE.AnimationAction;
     private rotateAngel: number = 0;
     private moveSpeed: number = 0;
     private ready: boolean = false;
 
+    public get graphics() : CharacterGraphics {
+        return this._graphics;
+    }
+
     public initialize(scene: THREE.Scene) {
-        this.graphics = new CharacterGraphics();
-        this.graphics.loadModelJson(scene, "../assets/character.json", (graphics) => {          
+        this._graphics = new CharacterGraphics();
+        this.graphics.loadModelJson(scene, "../assets/character.json", (graphics) => {
             this.graphics.blink();
+            scene.add(this.graphics);
             this.ready = true;
         });
     }
@@ -31,19 +36,15 @@ export class CharacterLogic {
     public keyDown(key: KeyboardEvent): void {
         switch (key.keyCode) {
             case 38: //UP
-                this.walk();
                 this.moveSpeed = 2.0;
                 break;
-            case 37: //LEFT
-                this.walk();
+            case 37: //LEFT                
                 this.rotateAngel = 0.1;
                 break;
-            case 39: //RIGHT
-                this.walk();
+            case 39: //RIGHT                
                 this.rotateAngel = -0.1;
                 break;
-            case 40: //DOWN
-                this.walk();
+            case 40: //DOWN                
                 this.moveSpeed = -2.0;
                 break;
         }
@@ -55,7 +56,7 @@ export class CharacterLogic {
                 this.stop();
                 this.moveSpeed = 0.0;
                 break;
-            case 37: //LEFT
+            case 37: //LEFT                
                 this.stop();
                 this.rotateAngel = 0;
                 break;
@@ -63,7 +64,7 @@ export class CharacterLogic {
                 this.stop();
                 this.rotateAngel = 0;
                 break;
-            case 40: //DOWN
+            case 40: //DOWN        
                 this.stop();
                 this.moveSpeed = 0.0;
                 break;
@@ -73,20 +74,23 @@ export class CharacterLogic {
     private move() {
         if (this.rotateAngel != 0) {
             var axis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-            this.graphics.root.rotateOnAxis(axis, this.rotateAngel);            
-        }
-        
-        if (this.moveSpeed != 0) {            
+            this.graphics.rotateOnAxis(axis, this.rotateAngel);
+            this.walk();
+        }        
+
+        if (this.moveSpeed != 0) {
             var direction: THREE.Vector3 = new THREE.Vector3();
             var up: THREE.Vector3 = new THREE.Vector3();
             var right: THREE.Vector3 = new THREE.Vector3();
-            this.graphics.root.matrix.extractBasis(right, up, direction);
-     
-            var current: THREE.Vector3 = this.graphics.root.position;
+            this.graphics.matrix.extractBasis(right, up, direction);
+
+            var current: THREE.Vector3 = this.graphics.position;
             var newPos = current.addVectors(current, direction.multiplyScalar(this.moveSpeed));
-            this.graphics.root.position.set(newPos.x, newPos.y, newPos.z);            
-        }                
-    }   
+            this.graphics.position.set(newPos.x, newPos.y, newPos.z);
+
+            this.walk();
+        }        
+    }
 
     private walk() {
         if (this.walkAction == undefined) {
@@ -112,11 +116,10 @@ export class CharacterLogic {
 
 }
 
-export class CharacterGraphics {
+export class CharacterGraphics extends THREE.Object3D {
 
     // Data
-    private CharacterModel: DATA.CharacterModel;
-    public root: THREE.Object3D;
+    private CharacterModel: DATA.CharacterModel;    
 
     //animation 
     private mixer: THREE.AnimationMixer;
@@ -139,8 +142,7 @@ export class CharacterGraphics {
         loader.load(pathToJson, (json) => {
             var characterModel: DATA.CharacterModel = JSON.parse(json);
 
-            this.buildFromData(characterModel);
-            scene.add(this.root);
+            this.buildFromData(characterModel);            
             onLoad(this);
         }, onProgress, onError);
     }
@@ -176,9 +178,8 @@ export class CharacterGraphics {
      * It will load in animations too.
      * @param model 
      */
-    private buildFromData(model: DATA.CharacterModel) {
-        this.root = new THREE.Object3D();
-        this.root.name = model.name;
+    private buildFromData(model: DATA.CharacterModel) {       
+        this.name = model.name;
 
         // Set material
         var textue = model.diffusedTex;
@@ -193,7 +194,7 @@ export class CharacterGraphics {
 
         material.shininess = 100.0;
         material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = false;
+        material.transparent = true;
         material.map = diffused;
         material.wireframe = false;
 
@@ -216,8 +217,19 @@ export class CharacterGraphics {
             mesh.position.set(meshData.position[0], meshData.position[1], meshData.position[2]);
             mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);
 
-            // Add to root 
-            this.root.add(mesh);
+            // Add mesh
+            if(meshData.parent == undefined) 
+            {
+                this.add(mesh);
+            }
+            else
+            {
+                this.traverse((object: THREE.Object3D)=>{
+                    if(object.name == meshData.parent){
+                        object.add(mesh);
+                    }
+                })
+            }
 
         });
 
@@ -233,7 +245,7 @@ export class CharacterGraphics {
             this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
         });
 
-        this.mixer = new THREE.AnimationMixer(this.root);
+        this.mixer = new THREE.AnimationMixer(this);
     }
 
     private convertToInterpolateMode(value: string): THREE.InterpolationModes {

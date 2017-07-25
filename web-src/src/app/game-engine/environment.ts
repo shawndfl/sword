@@ -65,8 +65,6 @@ class EnvornmentGraphics {
         diffused.wrapT = THREE.RepeatWrapping;        
         diffused.magFilter = THREE.NearestFilter;
         diffused.minFilter = THREE.NearestMipMapNearestFilter;
-        //diffused.repeat.x = 10;
-        //diffused.repeat.y = 10;
 
         var material = new THREE.MeshPhongMaterial();
         material.color = new THREE.Color(1.0, 1.0, 1.0);        
@@ -77,11 +75,15 @@ class EnvornmentGraphics {
 
         material.wireframe = false;
         var terrain = new G.TerrainGeometry().
-                     setSize(100,5,5).
+                     setSize(150,20,20).
                      buildTerrain();
         var geo = terrain;
         var mesh = new THREE.Mesh(geo, material);        
 
         this.root.add(mesh);
     }
+}
+
+class House {
+    
 }

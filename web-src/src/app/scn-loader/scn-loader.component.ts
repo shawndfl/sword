@@ -57,7 +57,7 @@ export class ScnLoaderComponent {
 
 //Test
     // Set material
-    var textue = "assets/face.png";
+    var textue = "assets/environment.png";
     var diffused = new THREE.TextureLoader().load(textue);
     diffused.wrapS = THREE.ClampToEdgeWrapping;
     diffused.wrapT = THREE.ClampToEdgeWrapping;
@@ -73,7 +73,7 @@ export class ScnLoaderComponent {
     material.map = diffused;
     material.wireframe = false;
     var geo = new G.GeoBuilder();
-    geo.offset(5,2,0).faceIn().nx(4,0).px(1,0).ny(5,0).py(3,0).nz(2,0).pz(6,0);
+    geo.offset(5,2,0).faceOut().nx(1,0).px(1,0).ny(3,0).py(4,0).nz(1,0).pz(1,0);
 
     var meshTest = new THREE.Mesh(geo.build(),material);
     meshTest.scale.set(40, 40, 40);

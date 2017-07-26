@@ -11,7 +11,8 @@ export class Environment {
    public initialize(scene: THREE.Scene) {
       var loader = new THREE.FileLoader();      
       this.graphics = new EnvornmentGraphics();
-      this.graphics.loadModelJson(scene, "../assets/environment.json", (graphics)=>{
+      this.graphics.loadModelJson(scene, "../assets/environment.json", (envData: DATA.Terrain)=>{
+
          this.ready = true;
       });
 
@@ -50,7 +51,7 @@ class EnvornmentGraphics {
 
             this.buildFromData(envData);
             scene.add(this.root);
-            onLoad(this);
+            onLoad(envData);
         }, onProgress, onError);
     }
 
@@ -75,15 +76,11 @@ class EnvornmentGraphics {
 
         material.wireframe = false;
         var terrain = new G.TerrainGeometry().
-                     setSize(150,20,20).
+                     setSize(envData.terrain[0], envData.terrain[1], envData.terrain[2]  ).
                      buildTerrain();
         var geo = terrain;
         var mesh = new THREE.Mesh(geo, material);        
 
         this.root.add(mesh);
     }
-}
-
-class House {
-    
 }

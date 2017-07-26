@@ -1,4 +1,4 @@
 {
-   "terrain" : [0],
+   "terrain" : [50,20,20],
     "texture1": "assets/environment.png"
 }

@@ -1,5 +1,221 @@
 import * as THREE from 'three';
+import * as DATA from '../game-engine/data';
 
+export class EnvornmentGraphics {
+   public root: THREE.Object3D;
+
+   /**
+     * Loads the meshes, animations, and textures from a json file.
+     * @param scene 
+     * @param pathToJson 
+     * @param onLoad 
+     * @param onProgress 
+     * @param onError 
+     */
+    public loadModelJson(scene: THREE.Scene, pathToJson: string, onLoad?, onProgress?, onError?): void {
+        var loader = new THREE.FileLoader();
+
+        // Cannot use json because the onLoad method expects a string 
+        // and making this json will return an object.
+        loader.setResponseType('text');
+        loader.load(pathToJson, (json) => {
+            var envData: DATA.Terrain = JSON.parse(json);
+
+            this.buildFromData(envData);
+            scene.add(this.root);
+            onLoad(envData);
+        }, onProgress, onError);
+    }
+
+    private buildFromData(envData: DATA.Terrain ) {
+        this.root = new THREE.Object3D();
+        this.root.name = "terrain";
+
+        // Set material
+        var textue = envData.texture1;        
+        var diffused = new THREE.TextureLoader().load(textue);
+        diffused.wrapS = THREE.RepeatWrapping;
+        diffused.wrapT = THREE.RepeatWrapping;        
+        diffused.magFilter = THREE.NearestFilter;
+        diffused.minFilter = THREE.NearestMipMapNearestFilter;
+
+        var material = new THREE.MeshPhongMaterial();
+        material.color = new THREE.Color(1.0, 1.0, 1.0);        
+        material.shininess = 100.0;
+        material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        material.transparent = false;
+        material.map = diffused;
+
+        material.wireframe = false;
+        var terrain = new TerrainGeometry().
+                     setSize(envData.terrain[0], envData.terrain[1], envData.terrain[2]  ).
+                     buildTerrain();
+        var geo = terrain;
+        var mesh = new THREE.Mesh(geo, material);        
+
+        this.root.add(mesh);
+    }
+}
+
+
+export class CharacterGraphics extends THREE.Object3D {
+
+    // Data
+    private CharacterModel: DATA.CharacterModel;    
+
+    //animation 
+    private mixer: THREE.AnimationMixer;
+    private animationClip: { [id: string]: THREE.AnimationClip } = {};
+
+    /**
+     * Loads the meshes, animations, and textures from a json file.
+     * @param scene 
+     * @param pathToJson 
+     * @param onLoad 
+     * @param onProgress 
+     * @param onError 
+     */
+    public loadModelJson(scene: THREE.Scene, pathToJson: string, onLoad?, onProgress?, onError?): void {
+        var loader = new THREE.FileLoader();
+
+        // Cannot use json because the onLoad method expects a string 
+        // and making this json will return an object.
+        loader.setResponseType('text');
+        loader.load(pathToJson, (json) => {
+            var characterModel: DATA.CharacterModel = JSON.parse(json);
+
+            this.buildFromData(characterModel);            
+            onLoad(this);
+        }, onProgress, onError);
+    }
+
+    public walk(): THREE.AnimationAction {
+
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['walk']);
+        return action;
+    }
+
+    public idle(): THREE.AnimationAction {
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['idle']);
+        return action;
+    }
+
+    public blink() {
+
+        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['blink']);
+
+        action.setEffectiveTimeScale(1.0);
+        action.loop = true;
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+    }
+
+    public update(delta: number) {
+        if (this.mixer != undefined)
+            this.mixer.update(delta);
+    }
+
+    /**
+     * builds a mesh from json data. This mesh will share the same material and texture.
+     * It will load in animations too.
+     * @param model 
+     */
+    private buildFromData(model: DATA.CharacterModel) {       
+        this.name = model.name;
+
+        // Set material
+        var textue = model.diffusedTex;
+        var diffused = new THREE.TextureLoader().load(textue);
+        diffused.wrapS = THREE.ClampToEdgeWrapping;
+        diffused.wrapT = THREE.ClampToEdgeWrapping;
+        diffused.magFilter = THREE.NearestFilter;
+        diffused.minFilter = THREE.NearestMipMapNearestFilter;
+
+        var material = new THREE.MeshPhongMaterial();
+        material.color = new THREE.Color(1.0, 1.0, 1.0);
+
+        material.shininess = 100.0;
+        material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        material.transparent = true;
+        material.map = diffused;
+        material.wireframe = false;
+
+        //Load in all meshes that make up this model
+        model.meshes.forEach(meshData => {
+
+            var geo: CubeGeometry = new CubeGeometry(
+                meshData.offset,
+                meshData.nx,
+                meshData.px,
+                meshData.ny,
+                meshData.py,
+                meshData.nz,
+                meshData.pz
+            );
+
+            var mesh: CubeMesh = new CubeMesh(geo, material);
+            mesh.name = meshData.name;
+
+            mesh.position.set(meshData.position[0], meshData.position[1], meshData.position[2]);
+            mesh.scale.set(meshData.scale[0], meshData.scale[1], meshData.scale[2]);
+
+            // Add mesh
+            if(meshData.parent == undefined) 
+            {
+                this.add(mesh);
+            }
+            else
+            {
+                this.traverse((object: THREE.Object3D)=>{
+                    if(object.name == meshData.parent){
+                        object.add(mesh);
+                    }
+                })
+            }
+
+        });
+
+        //Process all animation clips
+        model.clipes.forEach(clip => {
+            var tracks = new Array<THREE.KeyframeTrack>();
+            for (let track of clip.tracks) {
+
+                var interpolation: THREE.InterpolationModes = this.convertToInterpolateMode(track.interpolation);
+                var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, interpolation);
+                tracks.push(animationTrack);
+            }
+            this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+        });
+
+        this.mixer = new THREE.AnimationMixer(this);
+    }
+
+    private convertToInterpolateMode(value: string): THREE.InterpolationModes {
+        var interpolation: THREE.InterpolationModes;
+
+        switch (value) {
+            case "InterpolateDiscrete":
+                interpolation = THREE.InterpolateDiscrete;
+                break;
+            case "InterpolateLinear":
+                interpolation = THREE.InterpolateLinear;
+                break;
+            case "InterpolateSmooth":
+                interpolation = THREE.InterpolateSmooth;
+                break;
+            default:
+                interpolation = THREE.InterpolateLinear;
+        }
+        return interpolation;
+    }
+}
+
+
+/**
+ * Calculates the uv coords for a face
+ * @param x 0 based row
+ * @param y 0 based col
+ */
 function calculateUV(x: number, y: number): number[] {
     var s = 0.0625;
     return [

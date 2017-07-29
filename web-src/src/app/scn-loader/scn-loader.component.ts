@@ -1,7 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
-import { CharacterLogic } from '../game-engine/character';
-import { Environment } from '../game-engine/environment';
+import * as  GAME from '../game-engine/environment';
 import * as DATA from '../game-engine/data';
 import * as G from "../game-engine/graphics"
 import * as THREE from 'three';
@@ -20,8 +19,8 @@ export class ScnLoaderComponent {
 
   clock: THREE.Clock;
 
-  character: CharacterLogic;
-  environment: Environment;
+  character: GAME.Character;
+  environment: GAME.Environment;
 
   constructor() {
     this.mainTag = "mainGame";
@@ -38,13 +37,13 @@ export class ScnLoaderComponent {
     this.scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);   
 
-    this.character = new CharacterLogic();
+    this.character = new GAME.Character();
     this.character.initialize(this.scene);
 
     this.flyCamera = new CameraComponent(camera);
     this.flyCamera.setTarget(this.character.graphics);
 
-    this.environment = new Environment();
+    this.environment = new GAME.Environment();
     this.environment.initialize(this.scene);
 
     var ambient = new THREE.AmbientLight(0x909090); // soft white light

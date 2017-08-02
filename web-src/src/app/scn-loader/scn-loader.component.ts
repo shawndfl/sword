@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CameraComponent } from '../game-engine/camera.component';
-import * as  GAME from '../game-engine/environment';
+import * as GAME from '../game-engine/environment';
 import * as DATA from '../game-engine/data';
 import * as G from "../game-engine/graphics"
 import * as THREE from 'three';
@@ -13,13 +13,11 @@ import * as THREE from 'three';
 export class ScnLoaderComponent {
 
   scene: THREE.Scene;
-  flyCamera: CameraComponent;
   renderer: THREE.WebGLRenderer;
   mainTag: string;
 
   clock: THREE.Clock;
-
-  character: GAME.Character;
+  
   environment: GAME.Environment;
 
   constructor() {
@@ -34,14 +32,7 @@ export class ScnLoaderComponent {
   public init() {
 
     this.clock = new THREE.Clock();
-    this.scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);   
-
-    this.character = new GAME.Character();
-    this.character.initialize(this.scene);
-
-    this.flyCamera = new CameraComponent(camera);
-    this.flyCamera.setTarget(this.character.graphics);
+    this.scene = new THREE.Scene();    
 
     this.environment = new GAME.Environment();
     this.environment.initialize(this.scene);
@@ -88,29 +79,27 @@ export class ScnLoaderComponent {
 
   @HostListener('window:mouseover', ['$event'])
   onMouseOver(mouse: MouseEvent): void {
-    this.flyCamera.over(mouse);
+    this.environment.onMouseOver(mouse);
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(mouse: MouseEvent): void {
-    this.flyCamera.move(mouse);
+    this.environment.onMouseMove(mouse);
   }
 
   @HostListener('window:keyup', ['$event'])
   onKeyUp(key: KeyboardEvent): void {
-    this.flyCamera.keyUp(key);
-    this.character.keyUp(key);
+    this.environment.onKeyUp(key);    
   }
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(key: KeyboardEvent): void {
-    this.flyCamera.keyDown(key);
-    this.character.keyDown(key);
+    this.environment.onKeyDown(key);    
   }
 
   @HostListener('window:resize', ['$event'])
   onWindowResize(event) {
-    this.flyCamera.resize(event.target.innerWidth, event.target.innerHeight);
+    this.environment.onWindowResize(event.target.innerWidth, event.target.innerHeight);
     this.renderer.setSize(event.target.innerWidth, event.target.innerHeight);
     return true;
   }
@@ -118,10 +107,9 @@ export class ScnLoaderComponent {
   public render() {
     requestAnimationFrame(() => this.render());
     var delta = this.clock.getDelta();
-    this.flyCamera.update(delta);
-    this.character.update(delta);
+    this.environment.update(delta);    
 
-    this.renderer.render(this.scene, this.flyCamera.camera);
+    this.renderer.render(this.scene, this.environment.camera);
 
   }
 

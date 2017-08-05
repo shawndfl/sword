@@ -32,7 +32,7 @@ export class Mesh
     pz: number[];
 }
 
-export class CharacterModel
+export class Model
 {
     name: string;
     meshes: Mesh[];
@@ -46,7 +46,7 @@ export class Character{
     rotateSpeed: number;
     health: number;
 
-    model: CharacterModel;
+    model: Model;
 }
 
 /////////////////////////////////////////////////////////////

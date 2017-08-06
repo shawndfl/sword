@@ -249,7 +249,8 @@ export class TerrainGeometry extends THREE.BufferGeometry {
 }
 
 /**
- * The model for the character
+ * The model for the character. The Model data
+ * is accessed from Assets.ts
  */
 export class Model extends THREE.Object3D {
 

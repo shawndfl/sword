@@ -40,7 +40,7 @@ export class Model
     diffusedTex: string;
 }
 
-export class Character{
+export class Character {
     position: number[];
     moveSpeed: number;
     rotateSpeed: number;

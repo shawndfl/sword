@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import * as DATA from '../game-engine/data';
 import * as G from '../game-engine/graphics'
+import * as GAME from '../game-engine/environment'
 
 /**
  * This class will be used to hold all the logic for the main character.
@@ -12,36 +13,23 @@ export class Character {
     private walkAction: THREE.AnimationAction;
     private rotateAngel: number = 0;
     private moveSpeed: number = 0;
-    private ready: boolean = false;
     private speed: number = 5.0;
     private rotateSpeed: number = .05;
 
-    public get model() : G.Model {
+    public get model(): G.Model {
         return this._model;
     }
 
-    public initialize(scene: THREE.Scene) {
+    public initialize(environment: GAME.Environment) {
         this._model = new G.Model();
-         var loader = new THREE.FileLoader();
-
-        // Cannot use json because the onLoad method expects a string 
-        // and making this json will return an object.
-        loader.setResponseType('text');
-        loader.load("../assets/character.json", (json) => {
-            var model: DATA.Model = JSON.parse(json);
-
-            this.model.Initialize(model);            
-            this.model.blink();
-            this.ready = true;
-            scene.add(this.model);
-        });       
+        var model: DATA.Model = environment.assets.models.get("character");
+        this.model.Initialize(model);
+        this.model.blink();       
     }
 
     public update(delta: number) {
-        if (this.ready) {
-            this.model.update(delta);
-            this.move();
-        }
+        this.model.update(delta);
+        this.move();
     }
 
     public keyDown(key: KeyboardEvent): void {
@@ -85,9 +73,9 @@ export class Character {
     private move() {
         if (this.rotateAngel != 0) {
             var axis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-            this.model.rotateOnAxis(axis, this.rotateAngel);            
+            this.model.rotateOnAxis(axis, this.rotateAngel);
             this.walk();
-        }        
+        }
 
         if (this.moveSpeed != 0) {
             var direction: THREE.Vector3 = new THREE.Vector3();
@@ -100,7 +88,7 @@ export class Character {
             this.model.position.set(newPos.x, newPos.y, newPos.z);
 
             this.walk();
-        }        
+        }
     }
 
     private walk() {

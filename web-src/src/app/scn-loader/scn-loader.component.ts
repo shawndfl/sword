@@ -39,13 +39,14 @@ export class ScnLoaderComponent {
 
     var ambient = new THREE.AmbientLight(0x909090); // soft white light
     this.scene.add(ambient);
+    this.scene.background
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.getElementById(this.mainTag).appendChild(this.renderer.domElement);
 
-//Test
+    //Test
     // Set material
     var textue = "assets/environment.png";
     var diffused = new THREE.TextureLoader().load(textue);
@@ -107,7 +108,7 @@ export class ScnLoaderComponent {
   public render() {
     requestAnimationFrame(() => this.render());
     var delta = this.clock.getDelta();
-    this.environment.update(delta);    
+    this.environment.onUpdate(delta);    
 
     this.renderer.render(this.scene, this.environment.camera);
 

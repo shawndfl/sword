@@ -257,29 +257,38 @@ export class Model extends THREE.Object3D {
     //animation 
     private mixer: THREE.AnimationMixer;
     private animationClip: { [id: string]: THREE.AnimationClip } = {};
+    private _material: THREE.MeshPhongMaterial;
+    private _texture: THREE.Texture;
+
+    public texture(): THREE.Texture {
+        return this._texture;
+    }
+    public get material() : THREE.MeshPhongMaterial {
+        return this._material;
+    }
 
     /**
      * Loads the meshes, animations, and textures from a json file.    
-     */   
+     */
     public Initialize(model: DATA.Model) {
         this.name = model.name;
 
         // Set material
         var textue = model.diffusedTex;
-        var diffused = new THREE.TextureLoader().load(textue);
-        diffused.wrapS = THREE.ClampToEdgeWrapping;
-        diffused.wrapT = THREE.ClampToEdgeWrapping;
-        diffused.magFilter = THREE.NearestFilter;
-        diffused.minFilter = THREE.NearestMipMapNearestFilter;
+        this._texture = new THREE.TextureLoader().load(textue);
+        this._texture.wrapS = THREE.ClampToEdgeWrapping;
+        this._texture.wrapT = THREE.ClampToEdgeWrapping;
+        this._texture.magFilter = THREE.NearestFilter;
+        this._texture.minFilter = THREE.NearestMipMapNearestFilter;
 
-        var material = new THREE.MeshPhongMaterial();
-        material.color = new THREE.Color(1.0, 1.0, 1.0);
+        this._material = new THREE.MeshPhongMaterial();
+        this.material.color = new THREE.Color(1.0, 1.0, 1.0);
 
-        material.shininess = 100.0;
-        material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = true;
-        material.map = diffused;
-        material.wireframe = false;
+        this.material.shininess = 100.0;
+        this.material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        this.material.transparent = true;
+        this.material.map = this._texture;
+        this.material.wireframe = false;
 
         //Load in all meshes that make up this model
         model.meshes.forEach(meshData => {
@@ -294,7 +303,7 @@ export class Model extends THREE.Object3D {
                 meshData.pz
             );
 
-            var mesh: CubeMesh = new CubeMesh(geo, material);
+            var mesh: CubeMesh = new CubeMesh(geo, this.material);
             mesh.name = meshData.name;
 
             mesh.position.set(meshData.position[0], meshData.position[1], meshData.position[2]);
@@ -315,17 +324,18 @@ export class Model extends THREE.Object3D {
         });
 
         //Process all animation clips
-        model.clipes.forEach(clip => {
-            var tracks = new Array<THREE.KeyframeTrack>();
-            for (let track of clip.tracks) {
+        if (model.clipes != undefined) {
+            model.clipes.forEach(clip => {
+                var tracks = new Array<THREE.KeyframeTrack>();
+                for (let track of clip.tracks) {
 
-                var interpolation: THREE.InterpolationModes = this.convertToInterpolateMode(track.interpolation);
-                var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, interpolation);
-                tracks.push(animationTrack);
-            }
-            this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
-        });
-
+                    var interpolation: THREE.InterpolationModes = this.convertToInterpolateMode(track.interpolation);
+                    var animationTrack = new THREE.KeyframeTrack(track.name, track.times, track.values, interpolation);
+                    tracks.push(animationTrack);
+                }
+                this.animationClip[clip.name] = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+            });
+        }
         this.mixer = new THREE.AnimationMixer(this);
     }
 

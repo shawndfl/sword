@@ -28,10 +28,10 @@ export class Environment {
     private terrain: G.EnvornmentGraphics;
     private flyCamera: CameraComponent;
     private _assets: Assets;
-    private character: Character;
+    private _character: Character;
     private _items: PowerUp[] = [];
     private _scene: THREE.Scene;
-    private _start: boolean = false;
+    private _gameObjects: LifecycleBehavior[] = [];
 
     ////////////////////////////////////////
     //   Properties
@@ -50,6 +50,10 @@ export class Environment {
         return this._scene;
     }
 
+    public get character() {
+        return this._character;
+    }
+
     /**
      * Gets the camera
      */
@@ -60,7 +64,10 @@ export class Environment {
     ////////////////////////////////////////
     //   Life cycle management vars
     ////////////////////////////////////////
-
+    /**
+     * Has the game started yet.
+     */
+    private _start: boolean = false;
     /**
      * This is the number of async json files loaded.
      */
@@ -78,21 +85,33 @@ export class Environment {
         return this.loadCount == this.itemsToLoad;
     }
 
+    public constructor() {
+        this._character = new Character();
+        this._gameObjects.push(this._character);
+
+        // Setup the camera here so we can render something the first frame.
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+        this.flyCamera = new CameraComponent(camera);             
+
+        //create 10 items
+        for (var i = 0; i < 10; i++) {
+            var powerup = new PowerUp();            
+            this._items.push(powerup);
+            this._gameObjects.push(powerup);
+        }
+    }
+
+
     ////////////////////////////////////////
     //   Life cycle events
     ////////////////////////////////////////
     public initialize(scene: THREE.Scene) {
-        this._scene = scene;
-        this.character = new Character();        
+        this._scene = scene;       
 
-        //create 10 items
-        for(var i = 0; i < 10; i++)
-            this._items.push(new PowerUp());
-
-        // Setup the camera here so we can render something the first frame.
-        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-        this.flyCamera = new CameraComponent(camera);
-
+        this._gameObjects.forEach((value, index, array)=>{
+            value.initialize();
+        });
+        
         this.terrain = new G.EnvornmentGraphics();
         this.terrain.loadModelJson(scene, "../assets/environment.json", (envData: DATA.Terrain) => {
             this.loadCount++;
@@ -109,22 +128,23 @@ export class Environment {
      */
     private start() {
         this._start = true;
-        
-        this.character.start(this);
-        this.scene.add(this.character.model);
+
+        this._gameObjects.forEach((value, index, array)=>{
+            value.start(this);
+        });
+
+        this.scene.add(this._character.model);
 
         //initialize all power ups
         this._items.forEach((value, index, array) => {
-            array[index] = new PowerUp();
-            array[index].start(this);
             this.scene.add(array[index].model);
         })
 
-        this.flyCamera.setTarget(this.character.model);
+        this.flyCamera.setTarget(this._character.model);
     }
 
     private update(delta: number) {
-        this.character.update(delta);
+        this._character.update(delta);
         this.flyCamera.update(delta);
     }
 
@@ -138,12 +158,12 @@ export class Environment {
 
     public keyUp(key: KeyboardEvent): void {
         this.flyCamera.keyUp(key);
-        this.character.keyUp(key);
+        this._character.keyUp(key);
     }
 
     public keyDown(key: KeyboardEvent): void {
         this.flyCamera.keyDown(key);
-        this.character.keyDown(key);
+        this._character.keyDown(key);
     }
 
     public windowResize(width: number, height: number) {
@@ -227,8 +247,8 @@ export class PowerUp implements LifecycleBehavior {
     public start(environment: Environment) {
         this._model = new G.Model();
         var model: DATA.Model = environment.assets.models.get("powerup");
-        this.model.Initialize(model); 
-    
+        this.model.Initialize(model);
+
         /*
         // Set material
         var textue = "assets/environment.png";
@@ -285,10 +305,11 @@ export class Character implements LifecycleBehavior {
     ////////////////////////////////////////
     //   Life cycle events
     ////////////////////////////////////////
-    public initialize() {/*nop*/ }
+    public initialize() {
+        this._model = new G.Model();
+    }
 
     public start(environment: Environment) {
-        this._model = new G.Model();
         var model: DATA.Model = environment.assets.models.get("character");
         this.model.Initialize(model);
         this.model.blink();
@@ -381,6 +402,34 @@ export class Character implements LifecycleBehavior {
         if (this.walkAction != undefined && this.walkAction.isRunning) {
             this.walkAction.stop();
         }
+    }
+
+}
+
+export class Skybox implements LifecycleBehavior {
+    initialize() {
+
+    }
+    start(env: Environment) {
+
+    }
+    update(delta: number): void {
+
+    }
+    mouseOver(mouse: MouseEvent): void {
+        throw new Error("Method not implemented.");
+    }
+    mouseMove(mouse: MouseEvent): void {
+        throw new Error("Method not implemented.");
+    }
+    keyUp(key: KeyboardEvent): void {
+        throw new Error("Method not implemented.");
+    }
+    keyDown(key: KeyboardEvent): void {
+        throw new Error("Method not implemented.");
+    }
+    windowResize(width: number, height: number) {
+        throw new Error("Method not implemented.");
     }
 
 }

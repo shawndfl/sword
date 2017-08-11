@@ -62,15 +62,19 @@ export class ScnLoaderComponent {
     material.specular = new THREE.Color(1.0, 1.0, 1.0);
     material.transparent = true;
     material.map = diffused;
-    material.wireframe = false;
+    material.wireframe = false;    
+
+    //material.
+    //material.depthTest = false;
+    material.depthWrite = false;
     var geo = new G.GeoBuilder();
-    geo.offset(5,2,0).faceOut().nx(1,0).px(1,0).ny(3,0).py(4,0).nz(1,0).pz(1,0);
+    geo.offset(0,0,0).faceIn().nx(1,0).px(1,0).ny(3,0).py(4,0).nz(1,0).pz(1,0);
 
     var meshTest = new THREE.Mesh(geo.build(),material);
-    meshTest.scale.set(40, 40, 40);
-    meshTest.position.set(0, 0, 20);
+    meshTest.scale.set(7000, 7000, 7000);
+    meshTest.position.set(0, 0, 0);
 
-    this.scene.add(meshTest);
+    this.environment.character.model.add(meshTest);    
 
 //End test
     document.addEventListener('mousedown', () => this.onMouseOver, false);

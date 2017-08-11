@@ -258,11 +258,8 @@ export class Model extends THREE.Object3D {
     private mixer: THREE.AnimationMixer;
     private animationClip: { [id: string]: THREE.AnimationClip } = {};
     private _material: THREE.MeshPhongMaterial;
-    private _texture: THREE.Texture;
-
-    public texture(): THREE.Texture {
-        return this._texture;
-    }
+    public texture: THREE.Texture;
+    
     public get material() : THREE.MeshPhongMaterial {
         return this._material;
     }
@@ -275,11 +272,11 @@ export class Model extends THREE.Object3D {
 
         // Set material
         var textue = model.diffusedTex;
-        this._texture = new THREE.TextureLoader().load(textue);
-        this._texture.wrapS = THREE.ClampToEdgeWrapping;
-        this._texture.wrapT = THREE.ClampToEdgeWrapping;
-        this._texture.magFilter = THREE.NearestFilter;
-        this._texture.minFilter = THREE.NearestMipMapNearestFilter;
+        this.texture = new THREE.TextureLoader().load(textue);
+        this.texture.wrapS = THREE.ClampToEdgeWrapping;
+        this.texture.wrapT = THREE.ClampToEdgeWrapping;
+        this.texture.magFilter = THREE.NearestFilter;
+        this.texture.minFilter = THREE.NearestMipMapNearestFilter;
 
         this._material = new THREE.MeshPhongMaterial();
         this.material.color = new THREE.Color(1.0, 1.0, 1.0);
@@ -287,7 +284,7 @@ export class Model extends THREE.Object3D {
         this.material.shininess = 100.0;
         this.material.specular = new THREE.Color(1.0, 1.0, 1.0);
         this.material.transparent = true;
-        this.material.map = this._texture;
+        this.material.map = this.texture;
         this.material.wireframe = false;
 
         //Load in all meshes that make up this model

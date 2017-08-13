@@ -113,7 +113,7 @@ export class Environment {
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
         this.flyCamera = new CameraComponent(camera);
-       
+
     }
 
 
@@ -146,7 +146,7 @@ export class Environment {
 
         this._gameObjects.forEach((value, index, array) => {
             value.start(this);
-        });        
+        });
 
         // map dependencies
         this.scene.add(this._character.model);
@@ -264,7 +264,7 @@ export class Assets {
 export class PowerUpManager implements LifecycleBehavior {
     private _items: PowerUp[] = [];
 
-    public get items () {
+    public get items() {
         return this._items;
     }
 
@@ -276,8 +276,8 @@ export class PowerUpManager implements LifecycleBehavior {
 
     initialize() {
         //create 10 items
-        for (var i = 0; i < 10; i++) {            
-            this._items.push(new PowerUp());            
+        for (var i = 0; i < 10; i++) {
+            this._items.push(new PowerUp());
         }
     }
     start(env: Environment) {
@@ -314,7 +314,7 @@ export class PowerUp implements LifecycleBehavior {
     public start(environment: Environment) {
         this._model = new G.Model();
         var model: DATA.Model = environment.assets.models.get("powerup");
-        this.model.Initialize(model);    
+        this.model.Initialize(model);
 
         var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
         action.setEffectiveTimeScale(1.0);
@@ -342,6 +342,7 @@ export class PowerUp implements LifecycleBehavior {
 export class Character implements LifecycleBehavior {
     private _model: G.Model;
     private walkAction: THREE.AnimationAction;
+    private attackAction: THREE.AnimationAction;
     private rotateAngel: number = 0;
     private moveSpeed: number = 0;
     private speed: number = 5.0;
@@ -364,12 +365,17 @@ export class Character implements LifecycleBehavior {
         var model: DATA.Model = environment.assets.models.get("character");
         this.model.Initialize(model);
 
+        //run blink animation
         var action: THREE.AnimationAction = this.model.getActionFromClip('blink');
-
         action.setEffectiveTimeScale(1.0);
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
+
+        this.model.getAnimationMixer().addEventListener('finished', (e)=> {
+            
+
+        } )
     }
 
     public update(delta: number) {
@@ -444,15 +450,21 @@ export class Character implements LifecycleBehavior {
             this.model.position.set(newPos.x, newPos.y, newPos.z);
 
             this.walk();
-        }
+        }        
 
         if (this.attackReady && !this.attacking) {
-            var action: THREE.AnimationAction = this.model.getActionFromClip("attack");
-            action.setEffectiveTimeScale(2.5);
-            action.loop = false;
-            action.play();   
-            this.attackReady = false;
+            this.attackAction = this.model.getActionFromClip("attack");
+            this.attackAction.setEffectiveTimeScale(3.5);
+            this.attackAction.loop = false;
+            this.attackAction.setLoop(THREE.LoopOnce, 1);
+            this.attackAction.reset();
+            this.attackAction.play();                   
             this.attacking = true;
+            this.attackReady = false;            
+        }
+
+        if (this.attackAction != undefined && this.attacking && !this.attackAction.enabled) {            
+            this.attacking = false;
         }
     }
 

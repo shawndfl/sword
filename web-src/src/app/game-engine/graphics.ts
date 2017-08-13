@@ -340,6 +340,10 @@ export class Model extends THREE.Object3D {
         return this.mixer.clipAction(this.animationClip[clip]);
     }
 
+    public getAnimationMixer(): THREE.AnimationMixer {
+        return this.mixer;
+    }
+
     public update(delta: number) {
         if (this.mixer != undefined)
             this.mixer.update(delta);
@@ -569,8 +573,16 @@ export class CubeMesh extends THREE.Mesh {
     private nxOffset: number = 8 * 3;
     private pyOffset: number = 8 * 4;
     private nyOffset: number = 8 * 5;
-
+    
     private rowCount = 16;
+
+    get rotate(): THREE.Vector3 {
+        return new THREE.Vector3(this.rotation.x, this.rotation.y, this.rotation.z);
+    }
+
+    set rotate(value :THREE.Vector3) {
+        this.rotate.set(value.x, value.y, value.z);    
+    }
 
     // Used to animate the diffused texture
     get pz(): number {

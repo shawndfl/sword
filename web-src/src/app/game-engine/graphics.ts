@@ -335,30 +335,9 @@ export class Model extends THREE.Object3D {
         }
         this.mixer = new THREE.AnimationMixer(this);
     }
-
-    public walk(): THREE.AnimationAction {
-
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['walk']);
-        return action;
-    }
-
-    public idle(): THREE.AnimationAction {
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['idle']);
-        return action;
-    }
-
+    
     public getActionFromClip(clip: string): THREE.AnimationAction {
         return this.mixer.clipAction(this.animationClip[clip]);
-    }
-
-    public blink() {
-
-        var action: THREE.AnimationAction = this.mixer.clipAction(this.animationClip['blink']);
-
-        action.setEffectiveTimeScale(1.0);
-        action.loop = true;
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();
     }
 
     public update(delta: number) {

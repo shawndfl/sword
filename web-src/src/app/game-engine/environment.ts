@@ -19,6 +19,13 @@ export interface LifecycleBehavior {
 }
 
 /**
+ * Gets a random number
+ */
+export function random() {
+    return Math.random();
+}
+
+/**
  * This is the main container of the game.
  * Everything gets loaded and updated form here.
  * It also holds an instance of the main systems.
@@ -311,7 +318,7 @@ export class PowerUp implements LifecycleBehavior {
 
         var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
         action.setEffectiveTimeScale(1.0);
-        action.startAt(Math.random());        
+        action.startAt(random());
         action.loop = true;
         action.setLoop(THREE.LoopPingPong, Infinity);
         action.play();
@@ -339,6 +346,8 @@ export class Character implements LifecycleBehavior {
     private moveSpeed: number = 0;
     private speed: number = 5.0;
     private rotateSpeed: number = .05;
+    private attackReady: boolean = false;
+    private attacking: boolean = false;
 
     public get model(): G.Model {
         return this._model;
@@ -354,7 +363,13 @@ export class Character implements LifecycleBehavior {
     public start(environment: Environment) {
         var model: DATA.Model = environment.assets.models.get("character");
         this.model.Initialize(model);
-        this.model.blink();
+
+        var action: THREE.AnimationAction = this.model.getActionFromClip('blink');
+
+        action.setEffectiveTimeScale(1.0);
+        action.loop = true;
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
     }
 
     public update(delta: number) {
@@ -376,7 +391,11 @@ export class Character implements LifecycleBehavior {
             case 40: //DOWN                
                 this.moveSpeed = -this.speed;
                 break;
+            case 32: //SPACE BAR
+                this.attackReady = true;
+                break;
         }
+        //console.log("keydown" + key.keyCode);
     }
 
     public keyUp(key: KeyboardEvent): void {
@@ -426,16 +445,25 @@ export class Character implements LifecycleBehavior {
 
             this.walk();
         }
+
+        if (this.attackReady && !this.attacking) {
+            var action: THREE.AnimationAction = this.model.getActionFromClip("attack");
+            action.setEffectiveTimeScale(2.5);
+            action.loop = false;
+            action.play();   
+            this.attackReady = false;
+            this.attacking = true;
+        }
     }
 
     private walk() {
         if (this.walkAction == undefined) {
-            this.walkAction = this.model.walk();
+            this.walkAction = this.model.getActionFromClip("walk");
             this.walkAction.setEffectiveTimeScale(2.5);
             this.walkAction.loop = true;
             this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
         }
-        if (!this.walkAction.paused) {
+        if (!this.walkAction.isRunning()) {
             this.walkAction.play();
         }
     }
@@ -476,11 +504,11 @@ export class Skybox extends THREE.Object3D implements LifecycleBehavior {
         material.wireframe = false;
         material.depthWrite = false;
         var geo = new G.GeoBuilder();
-        geo.offset(0, 0, 0).faceIn().nx(1, 0).px(1, 0).ny(3, 0).py(4, 0).nz(1, 0).pz(1, 0);
+        geo.offset(0, 0, 0).faceIn().nx(2, 1).px(4, 1).ny(1, 1).py(0, 1).nz(3, 1).pz(5, 1);
 
         var mesh = new THREE.Mesh(geo.build(), material);
-        mesh.scale.set(7000, 7000, 7000);
-        mesh.position.set(0, 0, 0);
+        mesh.scale.set(7000, 1000, 7000);
+        mesh.position.set(0, 400, 0);
         this.add(mesh);
     }
 

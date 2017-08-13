@@ -44,39 +44,7 @@ export class ScnLoaderComponent {
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    document.getElementById(this.mainTag).appendChild(this.renderer.domElement);
-
-    //Test
-    // Set material
-    var textue = "assets/environment.png";
-    var diffused = new THREE.TextureLoader().load(textue);
-    diffused.wrapS = THREE.ClampToEdgeWrapping;
-    diffused.wrapT = THREE.ClampToEdgeWrapping;
-    diffused.magFilter = THREE.NearestFilter;
-    diffused.minFilter = THREE.NearestMipMapNearestFilter;
-
-    var material = new THREE.MeshPhongMaterial();
-    material.color = new THREE.Color(1.0, 1.0, 1.0);
-
-    material.shininess = 100.0;
-    material.specular = new THREE.Color(1.0, 1.0, 1.0);
-    material.transparent = true;
-    material.map = diffused;
-    material.wireframe = false;    
-
-    //material.
-    //material.depthTest = false;
-    material.depthWrite = false;
-    var geo = new G.GeoBuilder();
-    geo.offset(0,0,0).faceIn().nx(1,0).px(1,0).ny(3,0).py(4,0).nz(1,0).pz(1,0);
-
-    var meshTest = new THREE.Mesh(geo.build(),material);
-    meshTest.scale.set(7000, 7000, 7000);
-    meshTest.position.set(0, 0, 0);
-
-    this.environment.character.model.add(meshTest);    
-
-//End test
+    document.getElementById(this.mainTag).appendChild(this.renderer.domElement);  
     document.addEventListener('mousedown', () => this.onMouseOver, false);
     document.addEventListener('mouseMove', this.onMouseMove, false);
     //document.addEventListener('touchmove', onDocumentTouchMove, false);    

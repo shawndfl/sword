@@ -255,6 +255,26 @@
             "nz": [1, 0],
             "pz": [1, 0]
         }
+    ],
+    "clipes": [
+        {
+            "name": "idle",
+            "duration": 1.0,
+            "tracks": 
+            [                    
+                {
+                    "name": "item.position",
+                    "times": [0.0, 0.5, 1.0],
+                    "interpolation": "InterpolateLinear",
+                    "values":
+                    [
+                        0, 30, 0,  
+                        0, 35, 0,  
+                        0, 30, 0                          
+                    ]
+                }
+            ]
+        }
     ]
     }   
 ]

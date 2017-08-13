@@ -29,9 +29,10 @@ export class Environment {
     private flyCamera: CameraComponent;
     private _assets: Assets;
     private _character: Character;
-    private _items: PowerUp[] = [];
+    private _items: PowerUpManager;
     private _scene: THREE.Scene;
     private _gameObjects: LifecycleBehavior[] = [];
+    private _skybox: Skybox;
 
     ////////////////////////////////////////
     //   Properties
@@ -50,8 +51,15 @@ export class Environment {
         return this._scene;
     }
 
+    /**
+     * The character
+     */
     public get character() {
         return this._character;
+    }
+
+    public get skyBox() {
+        return this._skybox;
     }
 
     /**
@@ -89,16 +97,16 @@ export class Environment {
         this._character = new Character();
         this._gameObjects.push(this._character);
 
+        this._skybox = new Skybox();
+        this._gameObjects.push(this._skybox);
+
+        this._items = new PowerUpManager();
+        this._gameObjects.push(this._items);
+
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-        this.flyCamera = new CameraComponent(camera);             
-
-        //create 10 items
-        for (var i = 0; i < 10; i++) {
-            var powerup = new PowerUp();            
-            this._items.push(powerup);
-            this._gameObjects.push(powerup);
-        }
+        this.flyCamera = new CameraComponent(camera);
+       
     }
 
 
@@ -106,12 +114,12 @@ export class Environment {
     //   Life cycle events
     ////////////////////////////////////////
     public initialize(scene: THREE.Scene) {
-        this._scene = scene;       
+        this._scene = scene;
 
-        this._gameObjects.forEach((value, index, array)=>{
+        this._gameObjects.forEach((value, index, array) => {
             value.initialize();
         });
-        
+
         this.terrain = new G.EnvornmentGraphics();
         this.terrain.loadModelJson(scene, "../assets/environment.json", (envData: DATA.Terrain) => {
             this.loadCount++;
@@ -129,44 +137,59 @@ export class Environment {
     private start() {
         this._start = true;
 
-        this._gameObjects.forEach((value, index, array)=>{
+        this._gameObjects.forEach((value, index, array) => {
             value.start(this);
-        });
+        });        
 
+        // map dependencies
         this.scene.add(this._character.model);
-
-        //initialize all power ups
-        this._items.forEach((value, index, array) => {
-            this.scene.add(array[index].model);
-        })
-
         this.flyCamera.setTarget(this._character.model);
+        //initialize all power ups
+        this._items.addToScene(this.scene);
+
+        this._skybox.setTarget(this._character);
+        this.scene.add(this._skybox);
     }
 
     private update(delta: number) {
-        this._character.update(delta);
+        this._gameObjects.forEach((value, index, array) => {
+            value.update(delta);
+        });
         this.flyCamera.update(delta);
     }
 
     public mouseOver(mouse: MouseEvent): void {
+        this._gameObjects.forEach((value, index, array) => {
+            value.mouseOver(mouse);
+        });
         this.flyCamera.over(mouse);
     }
 
     public mouseMove(mouse: MouseEvent): void {
+        this._gameObjects.forEach((value, index, array) => {
+            value.mouseMove(mouse);
+        });
         this.flyCamera.move(mouse);
     }
 
     public keyUp(key: KeyboardEvent): void {
+        this._gameObjects.forEach((value, index, array) => {
+            value.keyUp(key);
+        });
         this.flyCamera.keyUp(key);
-        this._character.keyUp(key);
     }
 
     public keyDown(key: KeyboardEvent): void {
+        this._gameObjects.forEach((value, index, array) => {
+            value.keyDown(key);
+        });
         this.flyCamera.keyDown(key);
-        this._character.keyDown(key);
     }
 
     public windowResize(width: number, height: number) {
+        this._gameObjects.forEach((value, index, array) => {
+            value.windowResize(width, height);
+        });
         this.flyCamera.resize(width, height);
     }
 
@@ -231,6 +254,43 @@ export class Assets {
     }
 }
 
+export class PowerUpManager implements LifecycleBehavior {
+    private _items: PowerUp[] = [];
+
+    public get items () {
+        return this._items;
+    }
+
+    public addToScene(scene: THREE.Scene) {
+        this._items.forEach((value, index, array) => {
+            scene.add(value.model);
+        });
+    }
+
+    initialize() {
+        //create 10 items
+        for (var i = 0; i < 10; i++) {            
+            this._items.push(new PowerUp());            
+        }
+    }
+    start(env: Environment) {
+        this._items.forEach((value, index, array) => {
+            value.start(env);
+            value.model.position.x = index * 50;
+        });
+
+    }
+    update(delta: number): void {
+        this._items.forEach((value, index, array) => {
+            value.update(delta);
+        });
+    }
+    mouseOver(mouse: MouseEvent): void {/*nop*/ }
+    mouseMove(mouse: MouseEvent): void {/*nop*/ }
+    keyUp(key: KeyboardEvent): void {/*nop*/ }
+    keyDown(key: KeyboardEvent): void {/*nop*/ }
+    windowResize(width: number, height: number) {/*nop*/ }
+}
 /**
  * This is a power up a character can collect.
  */
@@ -247,32 +307,14 @@ export class PowerUp implements LifecycleBehavior {
     public start(environment: Environment) {
         this._model = new G.Model();
         var model: DATA.Model = environment.assets.models.get("powerup");
-        this.model.Initialize(model);
+        this.model.Initialize(model);    
 
-        /*
-        // Set material
-        var textue = "assets/environment.png";
-        var diffused = new THREE.TextureLoader().load(textue);
-        diffused.wrapS = THREE.ClampToEdgeWrapping;
-        diffused.wrapT = THREE.ClampToEdgeWrapping;
-        diffused.magFilter = THREE.NearestFilter;
-        diffused.minFilter = THREE.NearestMipMapNearestFilter;
-
-        var material = new THREE.MeshPhongMaterial();
-        material.color = new THREE.Color(1.0, 1.0, 1.0);
-
-        material.shininess = 100.0;
-        material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = true;
-        material.map = diffused;
-        material.wireframe = false;
-        var geo = new G.GeoBuilder();
-        geo.offset(5, 2, 0).faceOut().nx(1, 0).px(1, 0).ny(3, 0).py(4, 0).nz(1, 0).pz(1, 0);
-
-        var meshTest = new THREE.Mesh(geo.build(), material);
-        meshTest.scale.set(40, 40, 40);
-        meshTest.position.set(0, 0, 20);   
-        */
+        var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
+        action.setEffectiveTimeScale(1.0);
+        action.startAt(Math.random());        
+        action.loop = true;
+        action.setLoop(THREE.LoopPingPong, Infinity);
+        action.play();
     }
 
     public update(delta: number) {
@@ -406,30 +448,51 @@ export class Character implements LifecycleBehavior {
 
 }
 
-export class Skybox implements LifecycleBehavior {
+export class Skybox extends THREE.Object3D implements LifecycleBehavior {
+    private character: Character;
+
+    setTarget(character: Character) {
+        this.character = character;
+    }
     initialize() {
 
     }
     start(env: Environment) {
+        // Set material
+        var textue = "assets/environment.png";
+        var diffused = new THREE.TextureLoader().load(textue);
+        diffused.wrapS = THREE.ClampToEdgeWrapping;
+        diffused.wrapT = THREE.ClampToEdgeWrapping;
+        diffused.magFilter = THREE.NearestFilter;
+        diffused.minFilter = THREE.NearestMipMapNearestFilter;
 
+        var material = new THREE.MeshPhongMaterial();
+        material.color = new THREE.Color(1.0, 1.0, 1.0);
+
+        material.shininess = 100.0;
+        material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        material.transparent = true;
+        material.map = diffused;
+        material.wireframe = false;
+        material.depthWrite = false;
+        var geo = new G.GeoBuilder();
+        geo.offset(0, 0, 0).faceIn().nx(1, 0).px(1, 0).ny(3, 0).py(4, 0).nz(1, 0).pz(1, 0);
+
+        var mesh = new THREE.Mesh(geo.build(), material);
+        mesh.scale.set(7000, 7000, 7000);
+        mesh.position.set(0, 0, 0);
+        this.add(mesh);
     }
+
     update(delta: number): void {
-
+        //move the box around the character
+        var pos = this.character.model.position;
+        this.position.set(pos.x, pos.y, pos.z);
     }
-    mouseOver(mouse: MouseEvent): void {
-        throw new Error("Method not implemented.");
-    }
-    mouseMove(mouse: MouseEvent): void {
-        throw new Error("Method not implemented.");
-    }
-    keyUp(key: KeyboardEvent): void {
-        throw new Error("Method not implemented.");
-    }
-    keyDown(key: KeyboardEvent): void {
-        throw new Error("Method not implemented.");
-    }
-    windowResize(width: number, height: number) {
-        throw new Error("Method not implemented.");
-    }
+    mouseOver(mouse: MouseEvent): void {/*nop*/ }
+    mouseMove(mouse: MouseEvent): void {/*nop*/ }
+    keyUp(key: KeyboardEvent): void {/*nop*/ }
+    keyDown(key: KeyboardEvent): void {/*nop*/ }
+    windowResize(width: number, height: number) {/*nop*/ }
 
 }

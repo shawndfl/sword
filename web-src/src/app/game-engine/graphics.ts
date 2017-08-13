@@ -259,8 +259,8 @@ export class Model extends THREE.Object3D {
     private animationClip: { [id: string]: THREE.AnimationClip } = {};
     private _material: THREE.MeshPhongMaterial;
     public texture: THREE.Texture;
-    
-    public get material() : THREE.MeshPhongMaterial {
+
+    public get material(): THREE.MeshPhongMaterial {
         return this._material;
     }
 
@@ -347,7 +347,7 @@ export class Model extends THREE.Object3D {
         return action;
     }
 
-    public getActionFromClip(clip: string) {
+    public getActionFromClip(clip: string): THREE.AnimationAction {
         return this.mixer.clipAction(this.animationClip[clip]);
     }
 

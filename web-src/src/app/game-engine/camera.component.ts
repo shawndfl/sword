@@ -246,6 +246,8 @@ export class CameraComponent implements GAME.LifecycleBehavior {
     this.camera.updateProjectionMatrix();
   }
 
+  public characterMove(character: GAME.Character) {/*nop*/ }    
+
   private updateCamera(): void {
 
     if (this.angle.x > this.TwoPi)

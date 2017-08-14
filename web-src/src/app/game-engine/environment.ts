@@ -113,7 +113,7 @@ export class Environment {
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
         this.flyCamera = new CameraComponent(camera);
-
+        this._gameObjects.push(this.flyCamera);
     }
 
 
@@ -150,7 +150,7 @@ export class Environment {
 
         // map dependencies
         this.scene.add(this._character.model);
-        this.flyCamera.setTarget(this._character.model);
+        this.flyCamera.target = this._character.model;
         //initialize all power ups
         this._items.addToScene(this.scene);
 
@@ -161,43 +161,38 @@ export class Environment {
     private update(delta: number) {
         this._gameObjects.forEach((value, index, array) => {
             value.update(delta);
-        });
-        this.flyCamera.update(delta);
+        });        
     }
 
     public mouseOver(mouse: MouseEvent): void {
         this._gameObjects.forEach((value, index, array) => {
             value.mouseOver(mouse);
-        });
-        this.flyCamera.over(mouse);
+        });        
     }
 
     public mouseMove(mouse: MouseEvent): void {
         this._gameObjects.forEach((value, index, array) => {
             value.mouseMove(mouse);
-        });
-        this.flyCamera.move(mouse);
+        });        
     }
 
     public keyUp(key: KeyboardEvent): void {
         this._gameObjects.forEach((value, index, array) => {
             value.keyUp(key);
-        });
-        this.flyCamera.keyUp(key);
+        });        
+        console.log("keyup: " + key.keyCode);
     }
 
     public keyDown(key: KeyboardEvent): void {
         this._gameObjects.forEach((value, index, array) => {
             value.keyDown(key);
-        });
-        this.flyCamera.keyDown(key);
+        });        
     }
 
     public windowResize(width: number, height: number) {
         this._gameObjects.forEach((value, index, array) => {
             value.windowResize(width, height);
-        });
-        this.flyCamera.resize(width, height);
+        });        
     }
 
     ////////////////////////////////////////
@@ -370,12 +365,7 @@ export class Character implements LifecycleBehavior {
         action.setEffectiveTimeScale(1.0);
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();
-
-        this.model.getAnimationMixer().addEventListener('finished', (e)=> {
-            
-
-        } )
+        action.play();       
     }
 
     public update(delta: number) {
@@ -400,8 +390,7 @@ export class Character implements LifecycleBehavior {
             case 32: //SPACE BAR
                 this.attackReady = true;
                 break;
-        }
-        //console.log("keydown" + key.keyCode);
+        }      
     }
 
     public keyUp(key: KeyboardEvent): void {

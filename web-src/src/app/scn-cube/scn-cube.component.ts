@@ -57,12 +57,12 @@ export class ScnCubeComponent implements OnInit {
 
   @HostListener('window:mouseover', ['$event'])
   onMouseOver(mouse: MouseEvent): void {
-    this.camera.over(mouse);
+    this.camera.mouseOver(mouse);
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(mouse: MouseEvent): void {
-    this.camera.move(mouse);
+    this.camera.mouseMove(mouse);
   }
 
   @HostListener('window:keyup', ['$event'])
@@ -77,7 +77,7 @@ export class ScnCubeComponent implements OnInit {
 
   @HostListener('window:resize', ['$event'])
   onWindowResize(event) {
-    this.camera.resize(event.target.innerWidth, event.target.innerHeight);    
+    this.camera.windowResize(event.target.innerWidth, event.target.innerHeight);    
     this.renderer.setSize(event.target.innerWidth, event.target.innerHeight);
     return true;
   }

@@ -1,15 +1,38 @@
 import { Component, OnInit } from '@angular/core';
 import * as THREE from 'three';
+import * as GAME from "../game-engine/environment"
 
 @Component({})
-export class CameraComponent {
+export class CameraComponent implements GAME.LifecycleBehavior {
 
   private _camera: THREE.PerspectiveCamera;
   private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
   private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
   private readonly TwoPi: number = Math.PI * 2.0;
 
+  // Target following variables 
+  private targetObject: THREE.Object3D;
+  private lastTargetPos: THREE.Vector3;
+  private fullSpeedCount: number = 0;
+  private closeEnough: boolean = false;
   private freeCamera = false;
+
+  /**
+   * Set the target for the camera to follow.
+   * @param target 
+   */
+  public set target(target: THREE.Object3D) {
+    this.targetObject = target;
+    this.lastTargetPos = this.targetObject.getWorldPosition();
+  }
+
+  /**
+   * Gets the target
+   */
+  public get target(): THREE.Object3D {
+    return this.targetObject;
+  }
+
   public get camera(): THREE.PerspectiveCamera {
     return this._camera;
   }
@@ -57,13 +80,15 @@ export class CameraComponent {
     this.camera.updateMatrixWorld(true);
   }
 
+  initialize() { /*nop*/ }
+  start() { /*nop*/ }
 
-  over(mouse: MouseEvent): void {
+  mouseOver(mouse: MouseEvent): void {
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
   }
 
-  move(mouse: MouseEvent): void {
+  mouseMove(mouse: MouseEvent): void {
 
     if (mouse.buttons === 1) {
       var deltaX = -(mouse.x - this.lastPosition.x) * this.angleScale;
@@ -73,11 +98,8 @@ export class CameraComponent {
       this.angle.y += deltaY;
 
       this.updateCamera();
-      this.freeCamera = true;
     }
-    else {
-      this.freeCamera = false;
-    }
+
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
 
@@ -126,23 +148,18 @@ export class CameraComponent {
   }
 
   keyUp(key: KeyboardEvent): void {
+    switch (key.keyCode) {
+      case 9: //TAB
+        this.freeCamera = !this.freeCamera;
+        if (this.freeCamera)
+          console.log("Free Camera");
+        else
+          console.log("Target Camera");
+        break;
+    }
   }
 
-  private targetObject: THREE.Object3D;
-  private lastTargetPos: THREE.Vector3;
-  private fullSpeedCount: number = 0;
-  private closeEnough: boolean = false;
-
-  /**
-   * Set the target for the camera to follow.
-   * @param target 
-   */
-  public setTarget(target: THREE.Object3D) {
-    this.targetObject = target;
-    this.lastTargetPos = this.targetObject.getWorldPosition();
-  }
-
-  public update(delta: number) {
+  update(delta: number) {
     if (this.freeCamera)
       return;
 
@@ -215,7 +232,7 @@ export class CameraComponent {
 
       this.lookatForCamera(right, up, look, newPos);
       this.closeEnough = false;
-      
+
     } else {
       this.closeEnough = true;
     }
@@ -224,7 +241,7 @@ export class CameraComponent {
 
   }
 
-  public resize(width: number, height: number): void {
+  public windowResize(width: number, height: number): void {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }

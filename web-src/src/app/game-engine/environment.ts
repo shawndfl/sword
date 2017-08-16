@@ -152,8 +152,6 @@ export class Environment {
         // map dependencies
         this.scene.add(this._character.model);
         this.flyCamera.target = this._character.model;
-        //initialize all power ups
-        this._items.addToScene(this.scene);
 
         this._skybox.setTarget(this._character);
         this.scene.add(this._skybox);
@@ -181,7 +179,7 @@ export class Environment {
         this._gameObjects.forEach((value, index, array) => {
             value.keyUp(key);
         });
-        console.log("keyup: " + key.keyCode);
+        //console.log("keyup: " + key.keyCode);
     }
 
     public keyDown(key: KeyboardEvent): void {
@@ -271,30 +269,33 @@ export class Assets {
 export class PowerUpManager implements LifecycleBehavior {
 
     private _items: PowerUp[] = [];
+    private scene: THREE.Scene;
 
     public get items() {
         return this._items;
     }
 
-    public addToScene(scene: THREE.Scene) {
-        this._items.forEach((value, index, array) => {
-            scene.add(value.model);
-        });
-    }
-
     public initialize() {
         //create 10 items
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 100; i++) {
             this._items.push(new PowerUp());
         }
     }
     public start(env: Environment) {
+        this.scene = env.scene;
+
         this._items.forEach((value, index, array) => {
             value.start(env);
-            value.model.position.x = index * 50;
+            value.model.position.x = (random() * 2000) - 1000;
+            value.model.position.z = (random() * 2000) - 1000;
+        });
+
+        this._items.forEach((value, index, array) => {
+            this.scene.add(value.model);
         });
 
     }
+
     public update(delta: number): void {
         this._items.forEach((value, index, array) => {
             value.update(delta);
@@ -306,8 +307,22 @@ export class PowerUpManager implements LifecycleBehavior {
     public keyDown(key: KeyboardEvent): void {/*nop*/ }
     public windowResize(width: number, height: number) {/*nop*/ }
     public characterMove(character: Character) {
+        var hitItems = [];
         this._items.forEach((value, index, array) => {
             value.characterMove(character);
+            if (value.hit) {
+                hitItems.push(index);
+
+                //remove from scene
+                this.scene.remove(value.model);
+                value.destroy();
+            }
+
+        });
+
+        //remove from items
+        hitItems.forEach(element => {
+            this._items.slice(element, 1);
         });
     }
 }
@@ -317,6 +332,14 @@ export class PowerUpManager implements LifecycleBehavior {
 export class PowerUp implements LifecycleBehavior {
 
     private _model: G.Model;
+    private _bBox;
+    private _collisionHelper: THREE.BoxHelper;
+    private _hit: boolean = false;
+    private _scene;
+
+    public get hit() {
+        return this._hit;
+    }
 
     public get model(): G.Model {
         return this._model;
@@ -325,20 +348,27 @@ export class PowerUp implements LifecycleBehavior {
     public initialize() { /*nop*/ }
 
     public start(environment: Environment) {
+        this._scene = environment.scene;
         this._model = new G.Model();
         var model: DATA.Model = environment.assets.models.get("powerup");
         this.model.Initialize(model);
 
         var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
-        action.setEffectiveTimeScale(1.0);
+        action.setEffectiveTimeScale(0.4);
         action.startAt(random());
-        action.loop = true;
-        action.setLoop(THREE.LoopPingPong, Infinity);
+        action.loop = true;                   
+        action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
+
+        this._collisionHelper = new THREE.BoxHelper(this.model);
+        //this._scene.add(this._collisionHelper);
+        this._bBox = new THREE.Box3();
+        this._bBox.expandByObject(this._model);       
     }
 
     public update(delta: number) {
         this.model.update(delta);
+        
     }
 
     public keyDown(key: KeyboardEvent): void { /*nop*/ }
@@ -347,7 +377,16 @@ export class PowerUp implements LifecycleBehavior {
     public mouseMove(mouse: MouseEvent): void { /*nop*/ }
     public windowResize(width: number, height: number) { /*nop*/ }
     public characterMove(character: Character) {
+        this._collisionHelper.update();
+        this._bBox.makeEmpty();
+        this._bBox.expandByObject(this._model);
+        if (character.bBox.intersectsBox(this._bBox)) {
+            this._hit = true;
+        }
+    }
 
+    public destroy() {
+        this._scene.remove(this._collisionHelper);
     }
 }
 
@@ -367,7 +406,11 @@ export class Character implements LifecycleBehavior {
     private attacking: boolean = false;
     private _box: THREE.Box3;
     private environment: Environment;
-    private _collisionHelper: THREE.BoxHelper; 
+    private _collisionHelper: THREE.BoxHelper;
+
+    public get bBox(): THREE.Box3 {
+        return this._box;
+    }
 
     public get model(): G.Model {
         return this._model;
@@ -379,7 +422,7 @@ export class Character implements LifecycleBehavior {
     public initialize() {
         this._model = new G.Model();
         this._box = new THREE.Box3();
-        
+
     }
 
     public start(environment: Environment) {
@@ -392,10 +435,10 @@ export class Character implements LifecycleBehavior {
         action.setEffectiveTimeScale(1.0);
         action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();       
+        action.play();
 
         this._collisionHelper = new THREE.BoxHelper(this.model);
-        this.environment.scene.add(this._collisionHelper);       
+        //this.environment.scene.add(this._collisionHelper);
     }
 
     public update(delta: number) {
@@ -454,13 +497,15 @@ export class Character implements LifecycleBehavior {
     ////////////////////////////////////////
     private move() {
         var positionDirty = false;
+        // rotate
         if (this.rotateAngel != 0) {
             var axis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
             this.model.rotateOnAxis(axis, this.rotateAngel);
-            this.walk(); 
-            positionDirty = true;           
+            this.walk();
+            positionDirty = true;
         }
 
+        // move
         if (this.moveSpeed != 0) {
             var direction: THREE.Vector3 = new THREE.Vector3();
             var up: THREE.Vector3 = new THREE.Vector3();
@@ -469,11 +514,12 @@ export class Character implements LifecycleBehavior {
 
             var current: THREE.Vector3 = this.model.position;
             var newPos = current.addVectors(current, direction.multiplyScalar(this.moveSpeed));
-            this.model.position.set(newPos.x, newPos.y, newPos.z);                    
+            this.model.position.set(newPos.x, newPos.y, newPos.z);
             this.walk();
             positionDirty = true;
         }
 
+        // attack
         if (this.attackReady && !this.attacking) {
             this.attackAction = this.model.getActionFromClip("attack");
             this.attackAction.setEffectiveTimeScale(3.5);
@@ -486,14 +532,17 @@ export class Character implements LifecycleBehavior {
             positionDirty = true;
         }
 
+        // reset attack
         if (this.attackAction != undefined && this.attacking && !this.attackAction.enabled) {
             this.attacking = false;
         }
 
-        if(positionDirty){
+        // raise move event
+        if (positionDirty) {
             this._box.makeEmpty();
-            this._box.expandByObject(this.model);     
-            this._collisionHelper.update();       
+            this._box.expandByObject(this.model);
+            this._collisionHelper.update();
+            this.environment.onCharacterMove();
         }
     }
 

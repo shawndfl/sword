@@ -335,7 +335,7 @@ export class Model extends THREE.Object3D {
         }
         this.mixer = new THREE.AnimationMixer(this);
     }
-    
+
     public getActionFromClip(clip: string): THREE.AnimationAction {
         return this.mixer.clipAction(this.animationClip[clip]);
     }
@@ -573,16 +573,41 @@ export class CubeMesh extends THREE.Mesh {
     private nxOffset: number = 8 * 3;
     private pyOffset: number = 8 * 4;
     private nyOffset: number = 8 * 5;
-    
     private rowCount = 16;
+    private _rotX = 0;    
+    private _rotY = 0;    
+    private _rotZ = 0;    
 
-    get rotate(): THREE.Vector3 {
-        return new THREE.Vector3(this.rotation.x, this.rotation.y, this.rotation.z);
+    get rotX ():  number {
+        return this._rotX;
     }
 
-    set rotate(value :THREE.Vector3) {
-        this.rotate.set(value.x, value.y, value.z);    
+    set rotX(value: number) {
+        this._rotX = value;
+        var rad = THREE.Math.DEG2RAD * value;        
+        this.setRotationFromAxisAngle(new THREE.Vector3(1,0,0), rad);
+    }    
+
+    get rotY ():  number {
+        return this._rotY;
     }
+
+    set rotY(value: number) {
+        this._rotY = value;
+        var rad = THREE.Math.DEG2RAD * value;        
+        this.setRotationFromAxisAngle(new THREE.Vector3(0,1,0), rad);
+    }
+
+    get rotZ ():  number {
+        return this._rotZ;
+    }
+
+    set rotZ(value: number) {
+        this._rotZ = value;
+        var rad = THREE.Math.DEG2RAD * value;        
+        this.setRotationFromAxisAngle(new THREE.Vector3(0,0,1), rad);
+    }
+
 
     // Used to animate the diffused texture
     get pz(): number {
@@ -614,5 +639,51 @@ export class CubeMesh extends THREE.Mesh {
 
 
 export class Sword extends THREE.Mesh {
+
+}
+
+export class ParticleSystemOptions {
+    public maxParticles: number = 10000;
+    public particleNoiseTex;
+    public particleSpriteTex;
+    public containerCount: number = 1;
+}
+
+export class ParticleOptions {
+    public position: THREE.Vector3 = new THREE.Vector3();
+    public positionRandomness: number = 0.3;
+    public velocity: THREE.Vector3 = new THREE.Vector3();
+    public velocityRandomness: number = 0.5;
+    public color: number = 0xaa88ff;
+    public colorRandomness: number = 0.2;
+    public turbulence: number = 0.5;
+    public lifetime: number = 2;
+    public size: number = 5;
+    public sizeRandomness: number = 1;
+}
+
+export class GPUParticleSystem {
+    
+    private PARTICLE_COUNT;
+    private PARTICLE_CONTAINERS;
+
+    private PARTICLE_NOISE_TEXTURE;
+    private PARTICLE_SPRITE_TEXTURE;
+
+    private PARTICLES_PER_CONTAINER;
+    private PARTICLE_CURSOR = 0;
+    private time = 0;
+    private particleContainers = [];
+    private rand = [];
+
+    constructor(options: ParticleSystemOptions) {
+        this.PARTICLE_COUNT = options.maxParticles || 1000000;
+        this.PARTICLE_CONTAINERS = options.containerCount || 1;
+
+        this.PARTICLE_NOISE_TEXTURE = options.particleNoiseTex || null;
+        this.PARTICLE_SPRITE_TEXTURE = options.particleSpriteTex || null;
+        this.PARTICLES_PER_CONTAINER = Math.ceil(this.PARTICLE_COUNT / this.PARTICLE_CONTAINERS);
+    }
+
 
 }

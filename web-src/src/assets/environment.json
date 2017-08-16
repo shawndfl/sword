@@ -1,5 +1,5 @@
 {
-   "terrain" : [50,20,20],
+   "terrain" : [50,50,50],
    "texture1": "assets/environment.png",
    "items": [
        {

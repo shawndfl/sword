@@ -88,8 +88,15 @@ export class CameraComponent implements GAME.LifecycleBehavior {
     this.lastPosition.y = mouse.y;
   }
 
+  /**
+   * Move the camera using the mouse. While the left button is 
+   * down the camera is in free mode and can use the wasd keys.
+   * It will not return out of free mode until 'q' is hit
+   * 
+   * @param mouse 
+   */
   mouseMove(mouse: MouseEvent): void {
-
+    
     if (mouse.buttons === 1) {
       var deltaX = -(mouse.x - this.lastPosition.x) * this.angleScale;
       var deltaY = -(mouse.y - this.lastPosition.y) * this.angleScale;
@@ -97,8 +104,10 @@ export class CameraComponent implements GAME.LifecycleBehavior {
       this.angle.x += deltaX;
       this.angle.y += deltaY;
 
+      this.freeCamera = true;
+
       this.updateCamera();
-    }
+    }    
 
     this.lastPosition.x = mouse.x;
     this.lastPosition.y = mouse.y;
@@ -127,6 +136,9 @@ export class CameraComponent implements GAME.LifecycleBehavior {
       case 88: //X
         direction.add(new THREE.Vector3(0, -1, 0));
         break;
+      case 81: //Q
+        this.freeCamera = false;
+        break;      
     }
 
     if (direction.length() > 0) {
@@ -148,15 +160,7 @@ export class CameraComponent implements GAME.LifecycleBehavior {
   }
 
   keyUp(key: KeyboardEvent): void {
-    switch (key.keyCode) {
-      case 9: //TAB
-        this.freeCamera = !this.freeCamera;
-        if (this.freeCamera)
-          console.log("Free Camera");
-        else
-          console.log("Target Camera");
-        break;
-    }
+   
   }
 
   update(delta: number) {

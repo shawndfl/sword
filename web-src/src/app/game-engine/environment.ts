@@ -238,7 +238,7 @@ export class Environment {
 }
 
 /**
- * This class is used to load all the models from a json fil and store them in a
+ * This class is used to load all the models from a json file and store them in a
  * map. The models here can be passed into G.Models.Initialize().
  * 
  * An instance of this is created by Environment.

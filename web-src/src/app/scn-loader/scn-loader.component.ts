@@ -24,6 +24,9 @@ export class ScnLoaderComponent {
     this.mainTag = "mainGame";
   }
 
+  /*
+   *  The entry point for the game.
+   */
   ngOnInit() {
     this.init();
     this.render();
@@ -72,8 +75,11 @@ export class ScnLoaderComponent {
 
   @HostListener('window:resize', ['$event'])
   onWindowResize(event) {
-    this.environment.onWindowResize(event.target.innerWidth, event.target.innerHeight);
-    this.renderer.setSize(event.target.innerWidth, event.target.innerHeight);
+    var w = document.activeElement.clientWidth; //event.target.innerWidth
+    var h = document.activeElement.clientHeight; //event.target.innerHeight
+
+    this.environment.onWindowResize(w, h);
+    this.renderer.setSize(w, h);
     return true;
   }
 

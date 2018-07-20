@@ -13,25 +13,6 @@
         "pz": [6, 0]
 
         }
-   ],
-    "clipes": [{
-        "name": "ItemIdle",
-        "duration": 3.0,
-        "tracks": [                    
-            {
-                "name": "item",
-                "times": [0.0, 0.5, 1.0, 1.5, 2.0],
-                "interpolation": "InterpolateLinear",
-                "values": [
-                    0, 90, 0,  
-                    0, 180, 0,  
-                    0, 270, 0,  
-                    0, 360, 0
-                ]
-            }
-        ]
-    }
-    ]
-
+   ]    
 
 }

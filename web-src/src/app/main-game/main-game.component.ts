@@ -20,7 +20,6 @@ export class MainGameComponent {
 
     const sceneChanges: Observable<string> = this.scene.valueChanges;
     sceneChanges.subscribe(val => this.selected = val);
-
     sceneChanges.subscribe(val => console.log(val));
   }
   selectScene(): void {

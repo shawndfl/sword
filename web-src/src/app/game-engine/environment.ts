@@ -178,8 +178,7 @@ export class Environment {
     public keyUp(key: KeyboardEvent): void {
         this._gameObjects.forEach((value, index, array) => {
             value.keyUp(key);
-        });
-        //console.log("keyup: " + key.keyCode);
+        });        
     }
 
     public keyDown(key: KeyboardEvent): void {
@@ -579,9 +578,9 @@ export class Skybox extends THREE.Object3D implements LifecycleBehavior {
         // Set material
         var textue = "assets/environment.png";
         var diffused = new THREE.TextureLoader().load(textue);
-        diffused.wrapS = THREE.ClampToEdgeWrapping;
-        diffused.wrapT = THREE.ClampToEdgeWrapping;
-        diffused.magFilter = THREE.NearestFilter;
+        diffused.wrapS = THREE.MirroredRepeatWrapping;
+        diffused.wrapT = THREE.MirroredRepeatWrapping;
+        diffused.magFilter = THREE.NearestMipMapNearestFilter;
         diffused.minFilter = THREE.NearestMipMapNearestFilter;
 
         var material = new THREE.MeshPhongMaterial();
@@ -594,11 +593,14 @@ export class Skybox extends THREE.Object3D implements LifecycleBehavior {
         material.wireframe = false;
         material.depthWrite = false;
         var geo = new G.GeoBuilder();
-        geo.offset(0, 0, 0).faceIn().nx(2, 1).px(4, 1).ny(1, 1).py(0, 1).nz(3, 1).pz(5, 1);
+        geo.offset(0, 0, 0).faceIn().nx(0, 2).px(0, 2).ny(0, 1).py(0, 3).nz(0, 2).pz(0, 2);
 
         var mesh = new THREE.Mesh(geo.build(), material);
         mesh.scale.set(7000, 1000, 7000);
         mesh.position.set(0, 400, 0);
+
+
+
         this.add(mesh);
     }
 

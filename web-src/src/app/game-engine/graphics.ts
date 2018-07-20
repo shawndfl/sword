@@ -62,13 +62,20 @@ export class EnvornmentGraphics {
  * @param x 0 based row
  * @param y 0 based col
  */
-function calculateUV(x: number, y: number): number[] {
-    var s = 0.0625;
+function calculateUV(x: number, y: number): number[] {    
+    // (1 / 16) = 0.0625
+    // The size of a square in a 16 X 16 texture map
+    var s = 0.0625; 
+
+    // Used to pad the texture coodinates to bring them in closer.
+    // this will allow for nearest and linear filtering
+    var p = .002;
+
     return [
-        x * s, 1.0 - (y * s),
-        x * s + s, 1.0 - (y * s),
-        x * s + s, 1.0 - (y * s + s),
-        x * s, 1.0 - (y * s + s)
+        (x * s) + p, 1.0 - (y * s) - p,
+        x * s + s - p, 1.0 - (y * s) - p,
+        x * s + s - p, 1.0 - (y * s + s) + p,
+        (x * s) + p, 1.0 - (y * s + s) + p 
     ]
 }
 
@@ -111,7 +118,7 @@ export class TerrainGeometry extends THREE.BufferGeometry {
                 //this.calculateHeightFromNearVerts(row, col, vertices);
 
                 //calculate uv textures
-                calculateUV(0, 0).forEach(num => { tex1.push(num) });
+                calculateUV(1, 1).forEach(num => { tex1.push(num) });
 
                 var normal = [0, 1, 0];
 

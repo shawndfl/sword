@@ -53,8 +53,16 @@ export class Character {
 //              Tarrain
 /////////////////////////////////////////////////////////////
 export class Terrain {
-    terrain : number[];
+    rows : number;
+    columns : number;
+    scale: number;
     texture1: string;
+}
+
+export class Level {
+    seed: number;
+    terrain: Terrain;
+    character: Character;
 }
 
 /////////////////////////////////////////////////////////////

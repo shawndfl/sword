@@ -20,20 +20,13 @@ export interface LifecycleBehavior {
 }
 
 /**
- * Gets a random number
- */
-export function random() {
-    return Math.random();
-}
-
-/**
  * This is the main container of the game.
  * Everything gets loaded and updated form here.
  * It also holds an instance of the main systems.
  */
 export class Environment {
     private root: THREE.Object3D;
-    private terrain: G.EnvornmentGraphics;
+    private terrain: G.Terrain;
     private flyCamera: CameraComponent;
     private _assets: Assets;
     private _character: Character;
@@ -85,20 +78,20 @@ export class Environment {
      */
     private _start: boolean = false;
     /**
-     * This is the number of async json files loaded.
+     * This is the level loaded
      */
-    private loadCount: number = 0;
+    private levelLoaded: boolean = false;
     /**
-     * This is the number of json files the environment is loading.
+     * If the assets have been loaded
      */
-    private itemsToLoad: number = 2;
-
+    private assetsLoaded: boolean = false;
+    
     /**
      * When the number of json files loaded equals
      * the items to load ready will be set to true.
      */
     public get ready() {
-        return this.loadCount == this.itemsToLoad;
+        return this.levelLoaded && this.assetsLoaded;
     }
 
     public constructor() {
@@ -127,15 +120,36 @@ export class Environment {
         this._gameObjects.forEach((value, index, array) => {
             value.initialize();
         });
-
-        this.terrain = new G.EnvornmentGraphics();
-        this.terrain.loadModelJson(scene, "../assets/environment.json", (envData: DATA.Terrain) => {
-            this.loadCount++;
-        });
+        
+        this.loadLevelJson(scene, "../assets/environment.json");
 
         this._assets = new Assets();
         this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
-            this.loadCount++;
+            this.assetsLoaded = true;
+        });
+    }
+
+    /**
+      * Loads the meshes, animations, and textures from a json file then adds the meshes to the THREE scene    
+      */
+     public loadLevelJson(scene: THREE.Scene, pathToJson: string): void {
+        var loader = new THREE.FileLoader();
+
+        // Cannot use json because the onLoad method expects a string 
+        // and making this json will return an object.
+        loader.setResponseType('text');
+        loader.load(pathToJson, (json) => {
+            var levelData: DATA.Level = JSON.parse(json);
+
+            // set the random seed for everything
+            G.random.start(levelData.seed);
+            
+            this.terrain = new G.Terrain();
+            this.terrain.buildFromData(levelData.terrain);
+            scene.add(this.terrain);
+            
+            //we are done loading the level
+            this.levelLoaded = true;
         });
     }
 
@@ -285,8 +299,8 @@ export class PowerUpManager implements LifecycleBehavior {
 
         this._items.forEach((value, index, array) => {
             value.start(env);
-            value.model.position.x = (random() * 2000) - 1000;
-            value.model.position.z = (random() * 2000) - 1000;
+            value.model.position.x = (G.random.next() * 2000) - 1000;
+            value.model.position.z = (G.random.next() * 2000) - 1000;
         });
 
         this._items.forEach((value, index, array) => {
@@ -354,7 +368,7 @@ export class PowerUp implements LifecycleBehavior {
 
         var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
         action.setEffectiveTimeScale(0.4);
-        action.startAt(random());
+        action.startAt(G.random.next());
         action.loop = true;                   
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();

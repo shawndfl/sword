@@ -1,18 +1,9 @@
 {
-   "terrain" : [50,50,50],
-   "texture1": "assets/environment.png",
-   "items": [
-       {
-        "type" : "test",
-        "position": [0,5,0],
-        "nx": [4, 0],
-        "px": [1, 0],
-        "ny": [5, 0],
-        "py": [3, 0],
-        "nz": [2, 0],
-        "pz": [6, 0]
-
-        }
-   ]    
-
+   "seed": 123456,
+   "terrain": { 
+        "rows" : 50,
+        "columns" : 50,
+        "scale": 100,
+        "texture1": "assets/environment.png"
+   }
 }

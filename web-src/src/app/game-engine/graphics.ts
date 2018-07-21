@@ -1,38 +1,47 @@
 import * as THREE from 'three';
 import * as DATA from '../game-engine/data';
+import { Environment } from './environment';
 
-export class EnvornmentGraphics {
-    public root: THREE.Object3D;
+class Random
+{    
+    private seed: number;
 
     /**
-      * Loads the meshes, animations, and textures from a json file.
-      * @param scene 
-      * @param pathToJson 
-      * @param onLoad 
-      * @param onProgress 
-      * @param onError 
-      */
-    public loadModelJson(scene: THREE.Scene, pathToJson: string, onLoad?, onProgress?, onError?): void {
-        var loader = new THREE.FileLoader();
+    * Sets the seed
+    */
+    public start(seed: number) {
+        this.seed = seed % 2147483647;
+        if (this.seed <= 0) this.seed += 2147483646;
+    }    
+   
+    /**
+    * Returns a pseudo-random floating point number in range [0, 1).
+    */
+    public next(min = 0, max = 1): number {
+        // pseudo-random value between 1 and 2^32 - 2
+        this.seed = this.seed * 16807 % 2147483647
 
-        // Cannot use json because the onLoad method expects a string 
-        // and making this json will return an object.
-        loader.setResponseType('text');
-        loader.load(pathToJson, (json) => {
-            var envData: DATA.Terrain = JSON.parse(json);
+        // We know that result of seed will be 1 to 2147483646 (inclusive).
+        if(arguments.length === 0) {
+            return this.seed/2147483647;
+        }else if(arguments.length === 1){
+            return (this.seed/2147483647)*min;
+        }else{
+            return (this.seed/2147483647)*(max-min)+min;
+        }                
+    };      
+}
 
-            this.buildFromData(envData);
-            scene.add(this.root);
-            onLoad(envData);
-        }, onProgress, onError);
-    }
+export var random: Random = new Random();
 
-    private buildFromData(envData: DATA.Terrain) {
-        this.root = new THREE.Object3D();
-        this.root.name = "terrain";
+
+export class Terrain extends THREE.Object3D {    
+    
+    public buildFromData(terrain: DATA.Terrain) {        
+        this.name = "terrain";
 
         // Set material
-        var textue = envData.texture1;
+        var textue = terrain.texture1;
         var diffused = new THREE.TextureLoader().load(textue);
         diffused.wrapS = THREE.RepeatWrapping;
         diffused.wrapT = THREE.RepeatWrapping;
@@ -47,13 +56,12 @@ export class EnvornmentGraphics {
         material.map = diffused;
 
         material.wireframe = false;
-        var terrain = new TerrainGeometry().
-            setSize(envData.terrain[0], envData.terrain[1], envData.terrain[2]).
-            buildTerrain();
-        var geo = terrain;
-        var mesh = new THREE.Mesh(geo, material);
+        var terrainGeo = new TerrainGeometry().
+            setSize(terrain.scale, terrain.rows, terrain.columns).
+            buildTerrain(); 
+        var mesh = new THREE.Mesh(terrainGeo, material);
 
-        this.root.add(mesh);
+        this.add(mesh);
     }
 }
 
@@ -79,11 +87,11 @@ function calculateUV(x: number, y: number): number[] {
     ]
 }
 
-export class TerrainGeometry extends THREE.BufferGeometry {
+class TerrainGeometry extends THREE.BufferGeometry {
 
     private cellSize: number = 10;
-    private rowCount: number = 10;
-    private colCount: number = 10;
+    private rows: number = 10;
+    private columns: number = 10;
 
     public buildTerrain(): TerrainGeometry {
         var vertices = [];
@@ -98,8 +106,8 @@ export class TerrainGeometry extends THREE.BufferGeometry {
         //This will only work if each cell is moves up or
         //down in steps of (+-cellsize).
         var axis = -0.70710678118654752440084436210485;
-        var rowCount = this.rowCount;
-        var colCount = this.colCount;
+        var rowCount = this.rows;
+        var colCount = this.columns;
         var cellSize = this.cellSize;
 
         //Build the rows one quad at a time. 
@@ -114,8 +122,9 @@ export class TerrainGeometry extends THREE.BufferGeometry {
                 vertices.push(x, y, z + cellSize);
                 vertices.push(x + cellSize, y, z + cellSize);
                 vertices.push(x + cellSize, y, z);
-                vertices.push(x, y, z);
-                //this.calculateHeightFromNearVerts(row, col, vertices);
+                vertices.push(x, y, z);                
+                
+                var selecttitle = random
 
                 //calculate uv textures
                 calculateUV(1, 1).forEach(num => { tex1.push(num) });
@@ -155,10 +164,10 @@ export class TerrainGeometry extends THREE.BufferGeometry {
         super();
     }
 
-    public setSize(cellSize: number, rowCount: number, colCount: number): TerrainGeometry {
+    public setSize(cellSize: number, rows: number, columns: number): TerrainGeometry {
         this.cellSize = cellSize;
-        this.rowCount = rowCount;
-        this.colCount = colCount;
+        this.rows = rows;
+        this.columns = columns;
         return this;
     }
 
@@ -183,17 +192,17 @@ export class TerrainGeometry extends THREE.BufferGeometry {
         //left cell
         var lCell = sz - 8 * 3;
         //top cell
-        var tCell = sz - ((4 * 3) * 2 * this.rowCount) - (4 * 3);
+        var tCell = sz - ((4 * 3) * 2 * this.rows) - (4 * 3);
 
         // if we are in the conner return what ever we want
-        if (row == -this.rowCount && col == -this.colCount) {
+        if (row == -this.rows && col == -this.columns) {
             vertices[cell + s0] = h;
             vertices[cell + s1] = h;
             vertices[cell + s2] = h;
             vertices[cell + s3] = h;
         }
 
-        else if (row == -this.rowCount) {
+        else if (row == -this.rows) {
             //prevent peaks
             if (vertices[lCell + s1] != vertices[lCell + s2]) {
                 vertices[cell + s0] = vertices[lCell + s1];
@@ -209,7 +218,7 @@ export class TerrainGeometry extends THREE.BufferGeometry {
                 vertices[cell + s3] = vertices[lCell + s0];
             }
         }
-        else if (col == -this.colCount) {
+        else if (col == -this.columns) {
             //prevent peaks
             if (vertices[tCell + s0] != vertices[tCell + s1]) {
                 vertices[cell + s0] = vertices[tCell + s1];

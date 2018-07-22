@@ -32,9 +32,15 @@ class Random
     };      
 }
 
+/**
+ *  Used to calculate all random numbers. It's based off of
+ *  seed that comes from the environment.json file.
+ */
 export var random: Random = new Random();
 
-
+/**
+ * The terrain class. Uses TerrainGeometry to build a terrain.
+ */
 export class Terrain extends THREE.Object3D {    
     
     public buildFromData(terrain: DATA.Terrain) {        
@@ -124,10 +130,13 @@ class TerrainGeometry extends THREE.BufferGeometry {
                 vertices.push(x + cellSize, y, z);
                 vertices.push(x, y, z);                
                 
-                var selecttitle = random
+                var selecttitle = random.next();
+                var title = 0;
+                if(selecttitle > .5)
+                    title = 1
 
                 //calculate uv textures
-                calculateUV(1, 1).forEach(num => { tex1.push(num) });
+                calculateUV(title, title).forEach(num => { tex1.push(num) });
 
                 var normal = [0, 1, 0];
 

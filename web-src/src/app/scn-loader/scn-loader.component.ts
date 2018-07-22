@@ -13,6 +13,9 @@ import * as THREE from 'three';
 export class ScnLoaderComponent {
 
   scene: THREE.Scene;
+  sceneHUD: THREE.Scene;
+  cameraHUD: THREE.Camera;
+
   renderer: THREE.WebGLRenderer;
   mainTag: string;
 
@@ -46,10 +49,37 @@ export class ScnLoaderComponent {
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.autoClear = false;
 
     document.getElementById(this.mainTag).appendChild(this.renderer.domElement);  
     document.addEventListener('mousedown', () => this.onMouseOver, false);
     document.addEventListener('mouseMove', this.onMouseMove, false);
+
+    //HUD
+    var hudCanvas = document.createElement('canvas');
+    hudCanvas.width = window.innerWidth;
+    hudCanvas.height = window.innerHeight;
+
+    var hudBitmap = hudCanvas.getContext('2d');
+    hudBitmap.font = "Normal 40px Arial";
+    hudBitmap.textAlign = 'center';
+    hudBitmap.fillStyle = "rgba(245,245,245,0.75)";
+    hudBitmap.fillText('Initializing...', window.innerWidth / 2, window.innerHeight / 2);
+
+    this.cameraHUD = new THREE.OrthographicCamera(
+      -window.innerWidth/2, window.innerWidth/2,
+      window.innerHeight/2, -window.innerHeight/2,
+      0, 30
+      );
+    this.sceneHUD = new THREE.Scene();
+    var hudTexture = new THREE.Texture(hudCanvas)
+    hudTexture.needsUpdate = true;
+    var material = new THREE.MeshBasicMaterial( {map: hudTexture } );
+    material.transparent = true;
+
+    var planeGeometry = new THREE.PlaneGeometry( window.innerWidth, window.innerHeight );
+    var plane = new THREE.Mesh( planeGeometry, material );
+    this.sceneHUD.add( plane );
     //document.addEventListener('touchmove', onDocumentTouchMove, false);    
   }
 
@@ -87,9 +117,10 @@ export class ScnLoaderComponent {
     requestAnimationFrame(() => this.render());
     var delta = this.clock.getDelta();
     this.environment.onUpdate(delta);    
-
-    this.renderer.render(this.scene, this.environment.camera);
-
+    
+    this.renderer.render(this.scene, this.environment.camera, null, true);    
+    this.renderer.render(this.sceneHUD, this.cameraHUD, null, false);
+    
   }
 
 }

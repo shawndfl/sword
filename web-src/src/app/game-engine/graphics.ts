@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import * as DATA from '../game-engine/data';
-import { Environment } from './environment';
+import * as DATA from './data';
+import { Environment } from './system';
 
 class Random
 {    

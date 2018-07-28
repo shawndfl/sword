@@ -1,13 +1,9 @@
 <div>
   <label for="scene">Scene</label>
   <select id="scene" [formControl]="scene">
-    <option value="none">none</option>   
-    <option value="cube">cube</option>
+    <option value="none">none</option>     
     <option value="loader">loader</option>
   </select>
-  <ng-container *ngIf="selected =='cube'">
-    <app-scn-cube></app-scn-cube>
-  </ng-container>
   <ng-container *ngIf="selected =='loader'">
     <app-scn-loader></app-scn-loader>
   </ng-container>

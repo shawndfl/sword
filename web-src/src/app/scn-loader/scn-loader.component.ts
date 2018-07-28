@@ -1,8 +1,5 @@
 import { Component, OnInit, HostListener } from '@angular/core';
-import { CameraComponent } from '../game-engine/camera.component';
-import * as GAME from '../game-engine/environment';
-import * as DATA from '../game-engine/data';
-import * as G from "../game-engine/graphics"
+import * as GAME from '../game-engine/system';
 import * as THREE from 'three';
 
 @Component({
@@ -11,8 +8,7 @@ import * as THREE from 'three';
   styleUrls: ['./scn-loader.component.css']
 })
 export class ScnLoaderComponent {
-
-  scene: THREE.Scene;
+  
   sceneHUD: THREE.Scene;
   cameraHUD: THREE.Camera;
 
@@ -34,18 +30,25 @@ export class ScnLoaderComponent {
     this.init();
     this.render();
   }
-
   public init() {
 
-    this.clock = new THREE.Clock();
-    this.scene = new THREE.Scene();    
+    this.clock = new THREE.Clock();   
 
     this.environment = new GAME.Environment();
-    this.environment.initialize(this.scene);
+    this.environment.initialize();
 
-    var ambient = new THREE.AmbientLight(0x909090); // soft white light
-    this.scene.add(ambient);
-    this.scene.background
+    document.getElementById(this.mainTag).appendChild(this.environment.domElement);  
+    document.addEventListener('mousedown', () => this.onMouseOver, false);
+    document.addEventListener('mouseMove', this.onMouseMove, false);
+  }
+/*
+  public init() {
+
+    this.clock = new THREE.Clock();   
+
+    this.environment = new GAME.Environment();
+    this.environment.initialize();
+        
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -82,7 +85,7 @@ export class ScnLoaderComponent {
     this.sceneHUD.add( plane );
     //document.addEventListener('touchmove', onDocumentTouchMove, false);    
   }
-
+*/
   @HostListener('window:mouseover', ['$event'])
   onMouseOver(mouse: MouseEvent): void {
     this.environment.onMouseOver(mouse);
@@ -108,18 +111,14 @@ export class ScnLoaderComponent {
     var w = document.activeElement.clientWidth; //event.target.innerWidth
     var h = document.activeElement.clientHeight; //event.target.innerHeight
 
-    this.environment.onWindowResize(w, h);
-    this.renderer.setSize(w, h);
+    this.environment.onWindowResize(w, h);   
     return true;
   }
 
   public render() {
     requestAnimationFrame(() => this.render());
     var delta = this.clock.getDelta();
-    this.environment.onUpdate(delta);    
-    
-    this.renderer.render(this.scene, this.environment.camera, null, true);    
-    this.renderer.render(this.sceneHUD, this.cameraHUD, null, false);
+    this.environment.onUpdate(delta);           
     
   }
 

@@ -4,14 +4,23 @@ import * as DATA from './data';
 import * as G from './graphics';
 import { Vector3, log } from 'three';
 
+/**
+ * The state a componet can be in
+ */
 enum ComponentState
 {    
-    None = 0x00,
-    initializing = 0x01,
-    initialize= 0x02,    
-    Starting = 0x04,
-    Start = 0x08,
-    Destroy= 0x10,
+    None = 0x00,       
+    Start = 0x02,
+    Destroy= 0x04,
+}
+
+/**
+ * Interface for components that can collide with others
+ */
+export interface ICollidable {
+    OnHit(other: Component3D);
+    getBBox(): THREE.Box3;
+    getComponent(): Component3D;
 }
 
 /**
@@ -51,7 +60,7 @@ export interface ICharacter extends ISystemBehavior, IInputKeyboard {
 export interface IEnvironment {
     registerKeyboard(keyboard: IInputKeyboard);
     registerMouse(mouse: IInputMouse);
-    registerSystem(system: ISystemBehavior);
+    registerComponent(system: ISystemBehavior);
     registionWindowResize(component: ISystemResize);
 
     /**
@@ -96,12 +105,19 @@ export interface ISystemBehavior {
 export class Component implements ISystemBehavior
 {    
     private _state: ComponentState;
-
+    private _name: String;
     private _e: IEnvironment;
 
     public get e() : IEnvironment
     {
         return this._e;
+    }
+
+    /**
+     * Gets the name of the component.
+     */
+    public get name(): String {
+        return this._name;
     }
 
     /**
@@ -123,9 +139,13 @@ export class Component implements ISystemBehavior
         return this._e.getAssets();
     }
 
-    public constructor(e: IEnvironment){
+    public constructor(e: IEnvironment, name: String){
         this._e = e;
         this._state = ComponentState.None;
+        this._name = name;
+
+        //Register this component
+        e.registerComponent(this);
     }
 
     initialize() {
@@ -154,8 +174,8 @@ export class Component3D extends Component
         return this._obj;
     }
 
-    public constructor(e: IEnvironment){
-        super(e);
+    public constructor(e: IEnvironment, name: String){
+        super(e, name);
         this._obj = new THREE.Object3D();
     }    
 }
@@ -178,15 +198,18 @@ export class Environment implements IEnvironment {
     private character: Character;
     private items: PowerUpManager;    
     private skybox: Skybox;
+    private collision: CollisionManager;
 
     //DATA
     private levelData: DATA.Level;
 
     // Listeners
-    private systems: ISystemBehavior[] = [];    
+    private components: Map<String, Component> = new Map<String, Component>();    
     private inputMouseListeners: IInputMouse[] = [];    
     private inputKeyboardListeners: IInputKeyboard[] = [];        
     private windowResizeListeners: ISystemResize[] = [];        
+    private startQueue: Component[] = [];
+    private initQueue: Component[] = [];
     
     ////////////////////////////////////////
     //   Life cycle state vars
@@ -229,30 +252,11 @@ export class Environment implements IEnvironment {
     registerMouse(mouse: IInputMouse) {
         this.inputMouseListeners.push(mouse);
     }
-    registerSystem(system: ISystemBehavior) {
-        switch(this._state)
-        {            
-            case ComponentState.initializing:
-            system.initialize();
-            break;            
-            case ComponentState.initialize:
-            system.initialize();
-            break;
-            case ComponentState.Starting:
-            system.initialize();
-            system.start();
-            break;
-            case ComponentState.Start:
-            system.initialize();
-            system.start();
-            break;
-            case ComponentState.Destroy:
-            break;
-            default:
-                console.error("Unkown state " + this._state);
-            break;            
-        }        
-        this.systems.push(system);
+    registerComponent(component: Component) {
+        this.initQueue.push(component);
+        if(this.components.has(component.name))
+            console.error("More than one component called: " + component.name);
+        this.components.set(component.name, component);
     }    
     registionWindowResize(component: ISystemResize) {
         this.windowResizeListeners.push(component);
@@ -281,8 +285,7 @@ export class Environment implements IEnvironment {
      * Creates the scene and does some initialize setup.
      * @param scene 
      */
-    public initialize() {
-        this._state = ComponentState.initializing;
+    public initialize() {        
 
         this.scene = new THREE.Scene();
         
@@ -299,23 +302,18 @@ export class Environment implements IEnvironment {
         this.skybox = new Skybox(this);        
         this.items = new PowerUpManager(this);        
 
+        this.collision = new CollisionManager(this);
+
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-        this.flyCamera = new CameraComponent(this, camera);       
-
-        this.systems.forEach((value, index, array) => {
-            value.initialize();
-        });
-        this._state = ComponentState.initialize;
+        this.flyCamera = new CameraComponent(this, camera);                 
         
         this.loadLevelJson(this.scene, "../assets/environment.json");
 
         this.assets = new Assets(this);
         this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
             this.assetsLoaded = true;
-        });
-
-        this._state = ComponentState.initialize;
+        });        
     }   
 
     /**
@@ -345,23 +343,16 @@ export class Environment implements IEnvironment {
     /**
      * This is called when all the json files are loaded.
      */
-    private start() {
-        this._state = ComponentState.Starting;
-
+    private start() {        
         // map dependencies        
         this.flyCamera.target = this.character.model;
-        this.skybox.setTarget(this.character.model);                
-
-        this.systems.forEach((value, index, array) => {
-            value.start();
-        });        
-
+        this.skybox.setTarget(this.character.model);
         this._state = ComponentState.Start;
     }
 
     private update(delta: number) {
     
-        this.systems.forEach((value, index, array) => {
+        this.components.forEach((value, index, array) => {
             value.update(delta);
         });
         this.renderer.render(this.scene, this.flyCamera.camera, null, true);    
@@ -405,8 +396,24 @@ export class Environment implements IEnvironment {
     ////////////////////////////////////////
     public onUpdate(delta: number) {
         if (this.ready) {
+
+            // Initialize components
+            while(this.initQueue.length > 0)
+            {
+                var component = this.initQueue.pop();
+                component.initialize()
+                this.startQueue.push(component);
+            }
+
+            //Start any new components
+            while(this.startQueue.length > 0)
+            {
+                this.startQueue.pop().start();
+            }
+
             if (this._state != ComponentState.Start)
                 this.start();
+
             this.update(delta);
         }
     }
@@ -432,6 +439,32 @@ export class Environment implements IEnvironment {
             this.windowResize(width, height);
         
     }   
+}
+
+/**
+ * Collision manager handles all collisions in the game.
+ * First an object must register with the system then
+ * events are raised on update
+ */
+export class CollisionManager extends Component {
+    private staticObjects: ICollidable[] = []; 
+    private dynamicObjects: ICollidable[] = []; 
+
+    public constructor(e: IEnvironment) {
+        super(e, "CollisionManager");                
+    }
+
+    update(delta: number) {
+        this.dynamicObjects.forEach(dynamicObj => {
+            this.staticObjects.forEach(staticObj =>{
+                if(dynamicObj.getBBox().intersectsBox(staticObj.getBBox()))
+                {
+                    dynamicObj.OnHit(staticObj.getComponent())
+                }
+            });
+        });
+    }
+
 }
 
 export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard 
@@ -483,13 +516,12 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
   public position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
 
   public constructor(e: IEnvironment, camera: THREE.PerspectiveCamera) {
-    super(e);
+    super(e, "FlyCamera");
     this._camera = camera;
     this.updateCamera();
 
     //register events
-    this.e.registionWindowResize(this);
-    this.e.registerSystem(this);
+    this.e.registionWindowResize(this);    
     this.e.registerMouse(this);
     this.e.registerKeyboard(this);
   }
@@ -738,6 +770,11 @@ export class Assets extends Component {
 
     public models: Map<string, DATA.Model> = new Map<string, DATA.Model>();    
 
+    public constructor(e: Environment)
+    {
+        super(e, "AssetManager");
+    }
+
     public loadModelJson(pathToJson: string, onLoad?, onProgress?, onError?): void {
         var loader = new THREE.FileLoader();
 
@@ -770,14 +807,13 @@ export class PowerUpManager extends Component {
 
     public constructor(e: IEnvironment)
     {
-        super(e);
-        e.registerSystem(this);
+        super(e, "PowerUpManager");        
     }
 
     public initialize() {
         //create 10 items
         for (var i = 0; i < 100; i++) {
-            this._items.push(new PowerUp(this.e));
+            this._items.push(new PowerUp(this.e, "PowerUp"+ i ));
         }
     }
 
@@ -792,6 +828,7 @@ export class PowerUpManager extends Component {
         
     }   
     public windowResize(width: number, height: number) {/*nop*/ }
+
     public characterMove(character: Character) {
         var hitItems = [];
         this._items.forEach((value, index, array) => {
@@ -823,10 +860,8 @@ export class PowerUp extends Component3D {
     private _scene;
     private _position : Vector3;
 
-    public constructor(e: IEnvironment){
-        super(e);
-        e.registerSystem(this);
-
+    public constructor(e: IEnvironment, name: String){
+        super(e, name);        
         this._position = new Vector3(0,0,0);
     }       
 
@@ -893,8 +928,8 @@ export class PowerUp extends Component3D {
  * This class will be used to hold all the logic for the main character.
  * It will recive inputs from the scene and manipulate the character graphics
  */
-export class Character extends Component3D implements IInputKeyboard {
-        
+export class Character extends Component3D implements IInputKeyboard, ICollidable {
+   
     private _model: G.Model;
     private walkAction: THREE.AnimationAction;
     private attackAction: THREE.AnimationAction;
@@ -916,9 +951,8 @@ export class Character extends Component3D implements IInputKeyboard {
 
     public constructor(e: IEnvironment)
     {
-        super(e);
-        this.e.registerKeyboard(this);
-        this.e.registerSystem(this);
+        super(e, "Character");
+        this.e.registerKeyboard(this);        
     }
 
     ////////////////////////////////////////
@@ -994,6 +1028,20 @@ export class Character extends Component3D implements IInputKeyboard {
                 break;
         }
     }   
+
+    ////////////////////////////////////////
+    //   Collision function
+    ////////////////////////////////////////
+    OnHit(other: Component3D) {
+        console.info("Hit: " + other.name)
+    }
+    getBBox(): THREE.Box3 {
+        return this._box;
+    }
+    getComponent(): Component3D {
+        return this;
+    }
+        
 
     ////////////////////////////////////////
     //   private functions
@@ -1073,13 +1121,12 @@ export class Character extends Component3D implements IInputKeyboard {
  * This will render the skybox for the environment. This class will expect
  * an asset called environment.png to exists
  */
-export class Skybox extends Component3D implements ISystemBehavior {
+export class Skybox extends Component3D  {
     private target: THREE.Object3D;
 
     public constructor(e : IEnvironment)
     {
-        super(e);
-        e.registerSystem(this);
+        super(e, "SkyBox");        
     }
 
     public setTarget(target:  THREE.Object3D) {

@@ -2,6 +2,17 @@
 import * as THREE from 'three';
 import * as DATA from './data';
 import * as G from './graphics';
+import { Vector3, log } from 'three';
+
+enum ComponentState
+{    
+    None = 0x00,
+    initializing = 0x01,
+    initialize= 0x02,    
+    Starting = 0x04,
+    Start = 0x08,
+    Destroy= 0x10,
+}
 
 /**
  * Interface for systems that care about the resize event. 
@@ -75,29 +86,60 @@ export interface IEnvironment {
 export interface ISystemBehavior {
     initialize();
     start();
-    update(delta: number): void;            
+    update(delta: number): void;
+    destroy();            
 }
 
 /**
  * The base for all components
  */
-export class Component
-{
+export class Component implements ISystemBehavior
+{    
+    private _state: ComponentState;
+
     private _e: IEnvironment;
+
     public get e() : IEnvironment
     {
         return this._e;
     }
 
-    get assets() : Assets
+    /**
+     * Sets the state of this component.
+     * @param value 
+     */
+    protected setState(value : ComponentState)
+    {
+        this._state = value;
+    }
+
+    public getState() : ComponentState
+    {
+        return this._state;
+    }
+
+    public get assets() : Assets
     {
         return this._e.getAssets();
     }
 
     public constructor(e: IEnvironment){
         this._e = e;
+        this._state = ComponentState.None;
     }
 
+    initialize() {
+        
+    }
+    start() {
+        
+    }
+    update(delta: number): void {
+        
+    }
+    destroy() {
+        
+    }
 }
 
 /**
@@ -120,7 +162,7 @@ export class Component3D extends Component
 
 /**
  * This is the main container of the game.
- * Everything gets loaded and updated form here.
+ * Everything gets loaded and updated from here.
  * It also holds an instance of the main systems.
  */
 export class Environment implements IEnvironment {   
@@ -150,9 +192,9 @@ export class Environment implements IEnvironment {
     //   Life cycle state vars
     ////////////////////////////////////////
     /**
-     * Has the game started yet.
+     * The state of the system
      */
-    private _start: boolean = false;
+    private _state: ComponentState = ComponentState.None;
     /**
      * This is the level loaded
      */
@@ -188,6 +230,28 @@ export class Environment implements IEnvironment {
         this.inputMouseListeners.push(mouse);
     }
     registerSystem(system: ISystemBehavior) {
+        switch(this._state)
+        {            
+            case ComponentState.initializing:
+            system.initialize();
+            break;            
+            case ComponentState.initialize:
+            system.initialize();
+            break;
+            case ComponentState.Starting:
+            system.initialize();
+            system.start();
+            break;
+            case ComponentState.Start:
+            system.initialize();
+            system.start();
+            break;
+            case ComponentState.Destroy:
+            break;
+            default:
+                console.error("Unkown state " + this._state);
+            break;            
+        }        
         this.systems.push(system);
     }    
     registionWindowResize(component: ISystemResize) {
@@ -208,6 +272,7 @@ export class Environment implements IEnvironment {
     getScene(): THREE.Scene {
         return this.scene;
     }   
+
     ////////////////////////////////////////
     //   Life cycle events
     ////////////////////////////////////////
@@ -217,6 +282,8 @@ export class Environment implements IEnvironment {
      * @param scene 
      */
     public initialize() {
+        this._state = ComponentState.initializing;
+
         this.scene = new THREE.Scene();
         
         // rendering 
@@ -230,7 +297,7 @@ export class Environment implements IEnvironment {
 
         this.character = new Character(this);        
         this.skybox = new Skybox(this);        
-        //this.items = new PowerUpManager(this);        
+        this.items = new PowerUpManager(this);        
 
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
@@ -239,6 +306,7 @@ export class Environment implements IEnvironment {
         this.systems.forEach((value, index, array) => {
             value.initialize();
         });
+        this._state = ComponentState.initialize;
         
         this.loadLevelJson(this.scene, "../assets/environment.json");
 
@@ -246,6 +314,8 @@ export class Environment implements IEnvironment {
         this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
             this.assetsLoaded = true;
         });
+
+        this._state = ComponentState.initialize;
     }   
 
     /**
@@ -276,7 +346,7 @@ export class Environment implements IEnvironment {
      * This is called when all the json files are loaded.
      */
     private start() {
-        this._start = true;
+        this._state = ComponentState.Starting;
 
         // map dependencies        
         this.flyCamera.target = this.character.model;
@@ -285,6 +355,8 @@ export class Environment implements IEnvironment {
         this.systems.forEach((value, index, array) => {
             value.start();
         });        
+
+        this._state = ComponentState.Start;
     }
 
     private update(delta: number) {
@@ -333,7 +405,7 @@ export class Environment implements IEnvironment {
     ////////////////////////////////////////
     public onUpdate(delta: number) {
         if (this.ready) {
-            if (!this._start)
+            if (this._state != ComponentState.Start)
                 this.start();
             this.update(delta);
         }
@@ -362,7 +434,7 @@ export class Environment implements IEnvironment {
     }   
 }
 
-export class CameraComponent extends Component implements ISystemBehavior, ISystemResize, IInputMouse, IInputKeyboard 
+export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard 
 {
   private _camera: THREE.PerspectiveCamera;
   private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
@@ -526,7 +598,7 @@ export class CameraComponent extends Component implements ISystemBehavior, ISyst
   }
 
   keyUp(key: KeyboardEvent): void {
-   
+   //NOP
   }
 
   update(delta: number) {
@@ -685,7 +757,10 @@ export class Assets extends Component {
     }
 }
 
-export class PowerUpManager extends Component implements ISystemBehavior {
+/**
+ * This is the manager of all the items the user can collect
+ */
+export class PowerUpManager extends Component {
 
     private _items: PowerUp[] = [];  
 
@@ -701,28 +776,20 @@ export class PowerUpManager extends Component implements ISystemBehavior {
 
     public initialize() {
         //create 10 items
-        for (var i = 0; i < 500; i++) {
+        for (var i = 0; i < 100; i++) {
             this._items.push(new PowerUp(this.e));
         }
     }
 
     public start() {                
-        this._items.forEach((value, index, array) => {
-            value.start();
-            value.model.position.x = (G.random.next() * 5000) - 2000;
-            value.model.position.z = (G.random.next() * 5000) - 2000;
-        });
-
-        this._items.forEach((value, index, array) => {
-            this.e.getScene().add(value.model);
-        });
-
+        this._items.forEach((value, index, array) => {        
+            value.Positiion.x = (G.random.next() * 5000) - 2000;
+            value.Positiion.z = (G.random.next() * 5000) - 2000;
+        });        
     }
 
     public update(delta: number): void {
-        this._items.forEach((value, index, array) => {
-            value.update(delta);
-        });
+        
     }   
     public windowResize(width: number, height: number) {/*nop*/ }
     public characterMove(character: Character) {
@@ -732,8 +799,7 @@ export class PowerUpManager extends Component implements ISystemBehavior {
             if (value.hit) {
                 hitItems.push(index);
 
-                //remove from scene
-                this.e.getScene().remove(value.model);
+                //remove from scene                
                 value.destroy();
             }
 
@@ -748,49 +814,63 @@ export class PowerUpManager extends Component implements ISystemBehavior {
 /**
  * This is a power up a character can collect.
  */
-export class PowerUp extends Component implements ISystemBehavior {
+export class PowerUp extends Component3D {
 
     private _model: G.Model;
     private _bBox;
     private _collisionHelper: THREE.BoxHelper;
     private _hit: boolean = false;
     private _scene;
+    private _position : Vector3;
 
     public constructor(e: IEnvironment){
         super(e);
         e.registerSystem(this);
+
+        this._position = new Vector3(0,0,0);
+    }       
+
+    public get Positiion(): Vector3
+    {        
+        return this._position;
     }
 
     public get hit() {
         return this._hit;
-    }
+    }   
 
-    public get model(): G.Model {
-        return this._model;
-    }
-
-    public initialize() { /*nop*/ }
+    public initialize() {
+        this._model = new G.Model();
+     }
 
     public start() {        
-        this._model = new G.Model();
+        
         var model: DATA.Model = this.e.getAssets().models.get("powerup");
-        this.model.Initialize(model);
+        this._model.Initialize(model);
 
-        var action: THREE.AnimationAction = this.model.getActionFromClip("idle");
+        var action: THREE.AnimationAction = this._model.getActionFromClip("idle");
         action.setEffectiveTimeScale(0.4);
         action.startAt(G.random.next());
         action.loop = true;                   
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
 
-        this._collisionHelper = new THREE.BoxHelper(this.model);
+        this._collisionHelper = new THREE.BoxHelper(this._model);
         //this._scene.add(this._collisionHelper);
         this._bBox = new THREE.Box3();
-        this._bBox.expandByObject(this._model);       
+        this._bBox.expandByObject(this._model); 
+        this.obj.add(this._model);
+        this.obj.add(this._collisionHelper);   
+        
+        this.e.getScene().add(this.obj);
     }
 
-    public update(delta: number) {
-        this.model.update(delta);
+    public update(delta: number) {      
+        
+        // Set the position in case it changed
+        this._model.position.set(this._position.x, this._position.y, this._position.z);  
+
+        this._model.update(delta);
         
     }
         
@@ -805,6 +885,7 @@ export class PowerUp extends Component implements ISystemBehavior {
 
     public destroy() {
         this._scene.remove(this._collisionHelper);
+        this.e.getScene().remove(this._model);  
     }
 }
 
@@ -812,7 +893,7 @@ export class PowerUp extends Component implements ISystemBehavior {
  * This class will be used to hold all the logic for the main character.
  * It will recive inputs from the scene and manipulate the character graphics
  */
-export class Character extends Component3D implements ISystemBehavior, IInputKeyboard {
+export class Character extends Component3D implements IInputKeyboard {
         
     private _model: G.Model;
     private walkAction: THREE.AnimationAction;
@@ -988,6 +1069,10 @@ export class Character extends Component3D implements ISystemBehavior, IInputKey
 
 }
 
+/**
+ * This will render the skybox for the environment. This class will expect
+ * an asset called environment.png to exists
+ */
 export class Skybox extends Component3D implements ISystemBehavior {
     private target: THREE.Object3D;
 

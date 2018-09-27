@@ -532,6 +532,7 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
     private fullSpeedCount: number = 0;
     private closeEnough: boolean = false;
     private freeCamera = false;
+    private targetOffset = new THREE.Vector3(0, 100, 0);
 
     /**
      * Set the target for the camera to follow.
@@ -626,15 +627,14 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
      */
     mouseMove(mouse: MouseEvent): void {
 
-        if (mouse.buttons === 1) {
+        if (mouse.buttons === 1 && this.freeCamera) {
             var deltaX = -(mouse.x - this.lastPosition.x) * this.angleScale;
             var deltaY = -(mouse.y - this.lastPosition.y) * this.angleScale;
 
             this.angle.x += deltaX;
             this.angle.y += deltaY;
 
-            this.freeCamera = true;
-
+            //this.freeCamera = true;            
             this.updateCamera();
         }
 
@@ -665,9 +665,6 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
             case 88: //X
                 direction.add(new THREE.Vector3(0, -1, 0));
                 break;
-            case 81: //Q
-                this.freeCamera = false;
-                break;
         }
 
         if (direction.length() > 0) {
@@ -689,7 +686,11 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
     }
 
     keyUp(key: KeyboardEvent): void {
-        //NOP
+        switch (key.keyCode) {
+            case 81: //Q
+                this.freeCamera = !this.freeCamera;
+                break;
+        }
     }
 
     update(delta: number) {
@@ -709,11 +710,10 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         //how many frames has the target been moving at fullspeed
         var maxFullSpeedCount = 5;
 
-        var heightVector = new THREE.Vector3(0, height, 0);
-        var targetOffset = new THREE.Vector3(0, 100, 0);
+        var heightVector = new THREE.Vector3(0, height, 0);       
 
         var targetPos = this.targetObject.getWorldPosition();
-        targetPos.add(targetOffset);
+        targetPos.add(this.targetOffset);
 
         var targetDirection = this.targetObject.getWorldDirection();
         var idealCamPos = targetDirection.multiplyScalar(-distanceMin)
@@ -796,7 +796,14 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         if (this.angle.y < -this.TwoPi)
             this.angle.y += this.TwoPi;
 
-        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+        var look: THREE.Vector3 =  new THREE.Vector3(0, 0, 1);
+        if (this.targetObject) {
+            var targetPos = this.targetObject.getWorldPosition();
+            targetPos.add(this.targetOffset);
+            look = look.subVectors(this.position, targetPos);
+            look.normalize();
+        }        
+
         var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
         var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
 
@@ -807,6 +814,21 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         up = up.applyAxisAngle(right, this.angle.y);
         up.normalize();
 
+        look.crossVectors(right, up);
+        look.normalize();
+
+        this.lookatForCamera(right, up, look, this.position);
+    }
+
+    private lookAtTarget(target: Vector3): void {
+
+        var look: THREE.Vector3 = this.position.sub(target);
+        var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+        var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+        right.crossVectors(up, look);
+        right.normalize();
+        up.normalize();
         look.crossVectors(right, up);
         look.normalize();
 
@@ -1111,11 +1133,14 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     //   Collision function
     ////////////////////////////////////////
     OnHit(other: Component3D) {
-        console.info("Hit: " + other.name)
+        console.info("Hit: " + other.name);
+        this.model.material.color.g -= .05;
+        this.model.material.color.b -= .05;
+
     }
     getBBox(): THREE.Box3 {
-        this._box.makeEmpty();
-        this._box.expandByObject(this._model);
+        //this._box.makeEmpty();
+        //this._box.expandByObject(this._model);
         return this._box;
     }
     getComponent(): Component3D {

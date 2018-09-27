@@ -260,17 +260,41 @@
         },
         {
             "name": "blink",
-            "duration": 3.0,
+            "duration": 4.0,
             "tracks":  [
                 {
                     "name": "head.pz",
-                    "times": [0.0, 2.5, 2.8, 3.0],
+                    "times": [0.0, 2.5, 2.8, 4.0],
                     "interpolation": "InterpolateDiscrete",
                     "values": [
                         0,       
                         6,       
                         0,        
                         0        
+                    ]
+                },
+                {
+                    "name": "rsholder.position",
+                    "times": [0.0, 1.0, 2.0, 3.0, 4.0],
+                    "interpolation": "InterpolateLinear",
+                    "values": [
+                        -25, 70, 0,  
+                        -25, 68, 0,   
+                        -25, 70, 0,  
+                        -25, 68, 0,   
+                        -25, 70, 0  
+                    ]
+                },
+                {
+                    "name": "lsholder.position",
+                    "times": [0.0, 1.0, 2.0, 3.0, 4.0],
+                    "interpolation": "InterpolateLinear",
+                    "values": [
+                        25, 70, 0,  
+                        25, 68, 0,   
+                        25, 70, 0,  
+                        25, 68, 0,   
+                        25, 70, 0  
                     ]
                 }
             ]

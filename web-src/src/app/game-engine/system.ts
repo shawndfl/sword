@@ -3,15 +3,15 @@ import * as THREE from 'three';
 import * as DATA from './data';
 import * as G from './graphics';
 import { Vector3, log } from 'three';
+import { getComponent } from '../../../node_modules/@angular/core/src/linker/component_factory_resolver';
 
 /**
  * The state a componet can be in
  */
-enum ComponentState
-{    
-    None = 0x00,       
+enum ComponentState {
+    None = 0x00,
     Start = 0x02,
-    Destroy= 0x04,
+    Destroy = 0x04,
 }
 
 /**
@@ -27,14 +27,14 @@ export interface ICollidable {
  * Interface for systems that care about the resize event. 
  * Like the camera component
  */
-export interface ISystemResize {    
-    windowResize(width: number, height: number);    
+export interface ISystemResize {
+    windowResize(width: number, height: number);
 }
 
 /**
  * Manages the mouse events
  */
-export interface IInputMouse  {
+export interface IInputMouse {
     mouseOver(mouse: MouseEvent): void;
     mouseMove(mouse: MouseEvent): void;
 }
@@ -44,14 +44,14 @@ export interface IInputMouse  {
  */
 export interface IInputKeyboard {
     keyUp(key: KeyboardEvent): void;
-    keyDown(key: KeyboardEvent): void;   
+    keyDown(key: KeyboardEvent): void;
 }
 
 /**
  * The main character interface. 
  */
-export interface ICharacter extends ISystemBehavior, IInputKeyboard {        
-    getObj() : THREE.Object3D;
+export interface ICharacter extends ISystemBehavior, IInputKeyboard {
+    getObj(): THREE.Object3D;
 }
 
 /**
@@ -61,22 +61,23 @@ export interface IEnvironment {
     registerKeyboard(keyboard: IInputKeyboard);
     registerMouse(mouse: IInputMouse);
     registerComponent(system: ISystemBehavior);
-    registionWindowResize(component: ISystemResize);
+    registerWindowResize(component: ISystemResize);
+    registerCollidable(collidable: ICollidable);
 
     /**
      *  Gets the assets which is the models.
      */
-    getAssets() : Assets;
+    getAssets(): Assets;
 
-     /**
-     * The character
-     */
-    getCharacter(): Character            
+    /**
+    * The character
+    */
+    getCharacter(): Character
 
     /**
      * Gets the camera
      */
-    getCamera(): THREE.PerspectiveCamera        
+    getCamera(): THREE.PerspectiveCamera
 
     /**
      * Gets the meta data for a level
@@ -87,6 +88,23 @@ export interface IEnvironment {
      * Gets the scene
      */
     getScene(): THREE.Scene
+
+    /**
+     * Gets a component
+     * @param name 
+     */
+    getComponent(name: string): Component
+
+    /**
+     * Gets the collision manager
+     */
+    getCollisionManager(): CollisionManager;
+
+    /**
+     * Removes a component from all systems
+     * @param component 
+     */
+    removeComponent(name: string);
 }
 
 /**
@@ -96,50 +114,47 @@ export interface ISystemBehavior {
     initialize();
     start();
     update(delta: number): void;
-    destroy();            
+    destroy();
 }
 
 /**
  * The base for all components
  */
-export class Component implements ISystemBehavior
-{    
+export abstract class Component implements ISystemBehavior {
     private _state: ComponentState;
-    private _name: String;
+    private _name: string;
     private _e: IEnvironment;
 
-    public get e() : IEnvironment
-    {
+    public get e(): IEnvironment {
         return this._e;
     }
 
     /**
      * Gets the name of the component.
      */
-    public get name(): String {
+    public get name(): string {
         return this._name;
     }
+
+    public abstract get obj(): THREE.Object3D;
 
     /**
      * Sets the state of this component.
      * @param value 
      */
-    protected setState(value : ComponentState)
-    {
+    protected setState(value: ComponentState) {
         this._state = value;
     }
 
-    public getState() : ComponentState
-    {
+    public getState(): ComponentState {
         return this._state;
     }
 
-    public get assets() : Assets
-    {
+    public get assets(): Assets {
         return this._e.getAssets();
     }
 
-    public constructor(e: IEnvironment, name: String){
+    public constructor(e: IEnvironment, name: string) {
         this._e = e;
         this._state = ComponentState.None;
         this._name = name;
@@ -149,35 +164,33 @@ export class Component implements ISystemBehavior
     }
 
     initialize() {
-        
+
     }
     start() {
-        
+
     }
     update(delta: number): void {
-        
+
     }
     destroy() {
-        
+
     }
 }
 
 /**
  * The base for all 3d components
  */
-export class Component3D extends Component
-{
-    private _obj: THREE.Object3D;    
-   
-    public get obj() : THREE.Object3D
-    {
+export class Component3D extends Component {
+    private _obj: THREE.Object3D;
+
+    public get obj(): THREE.Object3D {
         return this._obj;
     }
 
-    public constructor(e: IEnvironment, name: String){
+    public constructor(e: IEnvironment, name: string) {
         super(e, name);
         this._obj = new THREE.Object3D();
-    }    
+    }
 }
 
 /**
@@ -185,18 +198,18 @@ export class Component3D extends Component
  * Everything gets loaded and updated from here.
  * It also holds an instance of the main systems.
  */
-export class Environment implements IEnvironment {   
-        
+export class Environment implements IEnvironment {
+
     /// THREE JS objects
     private scene: THREE.Scene;
-    private renderer: THREE.WebGLRenderer;    
+    private renderer: THREE.WebGLRenderer;
 
     //SYSTEMS
     private terrain: G.Terrain;
     private flyCamera: CameraComponent;
     private assets: Assets;
     private character: Character;
-    private items: PowerUpManager;    
+    private items: PowerUpManager;
     private skybox: Skybox;
     private collision: CollisionManager;
 
@@ -204,13 +217,13 @@ export class Environment implements IEnvironment {
     private levelData: DATA.Level;
 
     // Listeners
-    private components: Map<String, Component> = new Map<String, Component>();    
-    private inputMouseListeners: IInputMouse[] = [];    
-    private inputKeyboardListeners: IInputKeyboard[] = [];        
-    private windowResizeListeners: ISystemResize[] = [];        
+    private components: Map<String, Component> = new Map<String, Component>();
+    private inputMouseListeners: IInputMouse[] = [];
+    private inputKeyboardListeners: IInputKeyboard[] = [];
+    private windowResizeListeners: ISystemResize[] = [];
     private startQueue: Component[] = [];
     private initQueue: Component[] = [];
-    
+
     ////////////////////////////////////////
     //   Life cycle state vars
     ////////////////////////////////////////
@@ -226,14 +239,22 @@ export class Environment implements IEnvironment {
      * If the assets have been loaded
      */
     private assetsLoaded: boolean = false;
-    
+
     /**
      * When the number of json files loaded equals
      * the items to load ready will be set to true.
      */
     public get ready() {
         return this.levelLoaded && this.assetsLoaded;
-    }    
+    }
+
+    /**
+     * Gets a component
+     * @param name
+     */
+    public getComponent(name: string): Component {
+        return this.components.get(name);
+    }
 
     /**
      * Gets the dom Element. this can be used for subscribing 
@@ -254,28 +275,44 @@ export class Environment implements IEnvironment {
     }
     registerComponent(component: Component) {
         this.initQueue.push(component);
-        if(this.components.has(component.name))
+        if (this.components.has(component.name))
             console.error("More than one component called: " + component.name);
         this.components.set(component.name, component);
-    }    
-    registionWindowResize(component: ISystemResize) {
+    }
+    registerWindowResize(component: ISystemResize) {
         this.windowResizeListeners.push(component);
     }
+    registerCollidable(object: ICollidable) {
+        this.collision.registerCollidable(object);
+    }
+
     getAssets(): Assets {
         return this.assets;
-    }    
+    }
     getCharacter(): Character {
         return this.character;
-    }    
+    }
     getCamera(): THREE.PerspectiveCamera {
         return this.flyCamera.camera;
     }
     getData(): DATA.Level {
         return this.levelData;
-    }   
+    }
     getScene(): THREE.Scene {
         return this.scene;
-    }   
+    }
+    getCollisionManager(): CollisionManager {
+        return this.collision;
+    }
+    removeComponent(name: string) {
+        var component = this.components.get(name);
+        if (component) {
+            component.destroy();
+            this.components.delete(name);
+            this.collision.removeComponent(name);
+        }
+
+    }
 
     ////////////////////////////////////////
     //   Life cycle events
@@ -285,10 +322,10 @@ export class Environment implements IEnvironment {
      * Creates the scene and does some initialize setup.
      * @param scene 
      */
-    public initialize() {        
+    public initialize() {
 
         this.scene = new THREE.Scene();
-        
+
         // rendering 
         this.renderer = this.renderer = new THREE.WebGLRenderer();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -298,28 +335,28 @@ export class Environment implements IEnvironment {
         var ambient = new THREE.AmbientLight(0x909090); // soft white light
         this.scene.add(ambient);
 
-        this.character = new Character(this);        
-        this.skybox = new Skybox(this);        
-        this.items = new PowerUpManager(this);        
+        this.character = new Character(this);
+        this.skybox = new Skybox(this);
+        this.items = new PowerUpManager(this);
 
         this.collision = new CollisionManager(this);
 
         // Setup the camera here so we can render something the first frame.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-        this.flyCamera = new CameraComponent(this, camera);                 
-        
+        this.flyCamera = new CameraComponent(this, camera);
+
         this.loadLevelJson(this.scene, "../assets/environment.json");
 
         this.assets = new Assets(this);
         this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
             this.assetsLoaded = true;
-        });        
-    }   
+        });
+    }
 
     /**
       * Loads the meshes, animations, and textures from a json file then adds the meshes to the THREE scene    
       */
-     public loadLevelJson(scene: THREE.Scene, pathToJson: string): void {
+    public loadLevelJson(scene: THREE.Scene, pathToJson: string): void {
         var loader = new THREE.FileLoader();
 
         // Cannot use json because the onLoad method expects a string 
@@ -330,11 +367,11 @@ export class Environment implements IEnvironment {
 
             // set the random seed for everything
             G.random.start(levelData.seed);
-            
+
             this.terrain = new G.Terrain();
             this.terrain.buildFromData(levelData.terrain);
             scene.add(this.terrain);
-            
+
             //we are done loading the level
             this.levelLoaded = true;
         });
@@ -343,7 +380,7 @@ export class Environment implements IEnvironment {
     /**
      * This is called when all the json files are loaded.
      */
-    private start() {        
+    private start() {
         // map dependencies        
         this.flyCamera.target = this.character.model;
         this.skybox.setTarget(this.character.model);
@@ -351,45 +388,40 @@ export class Environment implements IEnvironment {
     }
 
     private update(delta: number) {
-    
+
         this.components.forEach((value, index, array) => {
             value.update(delta);
         });
-        this.renderer.render(this.scene, this.flyCamera.camera, null, true);    
+        this.renderer.render(this.scene, this.flyCamera.camera, null, true);
         //this.renderer.render(this.sceneHUD, this.cameraHUD, null, false);
-        
-    }
 
+    }
 
     public mouseOver(mouse: MouseEvent): void {
         this.inputMouseListeners.forEach((value, index, array) => {
             value.mouseOver(mouse);
         });
     }
-
     public mouseMove(mouse: MouseEvent): void {
         this.inputMouseListeners.forEach((value, index, array) => {
             value.mouseMove(mouse);
         });
     }
-
     public keyUp(key: KeyboardEvent): void {
         this.inputKeyboardListeners.forEach((value, index, array) => {
             value.keyUp(key);
-        });        
+        });
     }
-
     public keyDown(key: KeyboardEvent): void {
         this.inputKeyboardListeners.forEach((value, index, array) => {
             value.keyDown(key);
         });
     }
-
     public windowResize(width: number, height: number) {
         this.windowResizeListeners.forEach((value, index, array) => {
             value.windowResize(width, height);
         });
-    }    
+    }
 
     ////////////////////////////////////////
     //   callback events
@@ -398,16 +430,14 @@ export class Environment implements IEnvironment {
         if (this.ready) {
 
             // Initialize components
-            while(this.initQueue.length > 0)
-            {
+            while (this.initQueue.length > 0) {
                 var component = this.initQueue.pop();
                 component.initialize()
                 this.startQueue.push(component);
             }
 
             //Start any new components
-            while(this.startQueue.length > 0)
-            {
+            while (this.startQueue.length > 0) {
                 this.startQueue.pop().start();
             }
 
@@ -437,8 +467,8 @@ export class Environment implements IEnvironment {
         this.renderer.setSize(width, height);
         if (this.ready)
             this.windowResize(width, height);
-        
-    }   
+
+    }
 }
 
 /**
@@ -447,317 +477,349 @@ export class Environment implements IEnvironment {
  * events are raised on update
  */
 export class CollisionManager extends Component {
-    private staticObjects: ICollidable[] = []; 
-    private dynamicObjects: ICollidable[] = []; 
+
+    private collidable: ICollidable[] = [];
+    private haveMoved: ICollidable[] = [];
+
+    public registerCollidable(obj: ICollidable) {
+        this.collidable.push(obj);
+    }
+
+    public EnqueueDirty(obj: ICollidable) {
+        this.haveMoved.push(obj);
+    }
 
     public constructor(e: IEnvironment) {
-        super(e, "CollisionManager");                
+        super(e, "CollisionManager");
+    }
+
+    public get obj(): THREE.Object3D {
+        throw new Error("No Object3D in this class.");
+    }
+    public removeComponent(name: string) {
+        for (var i: number = 0; i < this.collidable.length; i++) {
+            if (this.collidable[i].getComponent().name == name) {
+                this.collidable.splice(i, 1);
+            }
+        }
+    }
+    update(delta: number) {
+        // check everything that has moved
+        while (this.haveMoved.length > 0) {
+            var subject = this.haveMoved.pop();
+            // against everything else
+            this.collidable.forEach(target => {
+                if (target != subject) {
+                    if (target.getBBox().intersectsBox(subject.getBBox())) {
+                        subject.OnHit(target.getComponent());
+                        target.OnHit(subject.getComponent());
+                    }
+                }
+            });
+        }
+    }
+}
+
+export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard {
+    private _camera: THREE.PerspectiveCamera;
+    private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
+    private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
+    private readonly TwoPi: number = Math.PI * 2.0;
+
+    // Target following variables 
+    private targetObject: THREE.Object3D;
+    private lastTargetPos: THREE.Vector3;
+    private fullSpeedCount: number = 0;
+    private closeEnough: boolean = false;
+    private freeCamera = false;
+
+    /**
+     * Set the target for the camera to follow.
+     * @param target 
+     */
+    public set target(target: THREE.Object3D) {
+        this.targetObject = target;
+        this.lastTargetPos = this.targetObject.getWorldPosition();
+    }
+
+    public get obj(): THREE.Object3D {
+        throw new Error("No Object3D in this class.");
+    }
+
+    /**
+     * Gets the target
+     */
+    public get target(): THREE.Object3D {
+        return this.targetObject;
+    }
+
+    public get camera(): THREE.PerspectiveCamera {
+        return this._camera;
+    }
+    /**
+     * Scale the camera's rotation speed
+     */
+    public angleScale: number = .005;
+
+    /**
+     * Scale the camera's movement speed
+     */
+    public moveScale: number = 5;
+
+    /**
+     * The camera's position
+     */
+    public position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
+
+    public constructor(e: IEnvironment, camera: THREE.PerspectiveCamera) {
+        super(e, "FlyCamera");
+        this._camera = camera;
+        this.updateCamera();
+
+        //register events
+        this.e.registerWindowResize(this);
+        this.e.registerMouse(this);
+        this.e.registerKeyboard(this);
+    }
+
+    debug(): void {
+
+        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+        var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+        var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+        this.camera.matrix.extractBasis(right, up, look);
+        var te = this.camera.matrix.elements;
+        var position = new THREE.Vector3(te[12], te[13], te[14]);
+
+        console.log("right: " + right.x + ", " + right.y + ", " + right.z);
+        console.log("up: " + up.x + ", " + up.y + ", " + up.z);
+        console.log("look: " + look.x + ", " + look.y + ", " + look.z);
+        console.log("position: " + position.x + ", " + position.y + ", " + position.z);
+    }
+
+    private lookatForCamera(xAxis: THREE.Vector3, yAxis: THREE.Vector3, zAxis: THREE.Vector3, eye: THREE.Vector3): void {
+        this.position = eye;
+        this.camera.matrix.makeBasis(xAxis, yAxis, zAxis);
+        this.camera.matrix.setPosition(eye);
+        this.camera.matrixAutoUpdate = false;
+        this.camera.updateMatrixWorld(true);
+    }
+
+    initialize() { /*nop*/ }
+
+    start() {
+        this.target = this.e.getComponent("Character").obj;
+    }
+
+    mouseOver(mouse: MouseEvent): void {
+        this.lastPosition.x = mouse.x;
+        this.lastPosition.y = mouse.y;
+    }
+
+    /**
+     * Move the camera using the mouse. While the left button is 
+     * down the camera is in free mode and can use the wasd keys.
+     * It will not return out of free mode until 'q' is hit
+     * 
+     * @param mouse 
+     */
+    mouseMove(mouse: MouseEvent): void {
+
+        if (mouse.buttons === 1) {
+            var deltaX = -(mouse.x - this.lastPosition.x) * this.angleScale;
+            var deltaY = -(mouse.y - this.lastPosition.y) * this.angleScale;
+
+            this.angle.x += deltaX;
+            this.angle.y += deltaY;
+
+            this.freeCamera = true;
+
+            this.updateCamera();
+        }
+
+        this.lastPosition.x = mouse.x;
+        this.lastPosition.y = mouse.y;
+
+    }
+
+    keyDown(key: KeyboardEvent): void {
+        var direction: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+        switch (key.keyCode) {
+            case 87: //W       
+                direction.add(new THREE.Vector3(0, 0, -1));
+                break;
+            case 65: //A
+                direction.add(new THREE.Vector3(-1, 0, 0));
+                break;
+            case 68: //D
+                direction.add(new THREE.Vector3(1, 0, 0));
+                break;
+            case 83: //S
+                direction.add(new THREE.Vector3(0, 0, 1));
+                break;
+            case 69: //E
+                direction.add(new THREE.Vector3(0, 1, 0));
+                break;
+            case 88: //X
+                direction.add(new THREE.Vector3(0, -1, 0));
+                break;
+            case 81: //Q
+                this.freeCamera = false;
+                break;
+        }
+
+        if (direction.length() > 0) {
+            direction.multiplyScalar(this.moveScale);
+            var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+            var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+            var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+
+            this.camera.matrix.extractBasis(right, up, look);
+
+            look.multiplyScalar(direction.z);
+            up.multiplyScalar(direction.y);
+            right.multiplyScalar(direction.x);
+
+            this.position.add(right).add(up).add(look);
+
+            this.updateCamera();
+        }
+    }
+
+    keyUp(key: KeyboardEvent): void {
+        //NOP
     }
 
     update(delta: number) {
-        this.dynamicObjects.forEach(dynamicObj => {
-            this.staticObjects.forEach(staticObj =>{
-                if(dynamicObj.getBBox().intersectsBox(staticObj.getBBox()))
-                {
-                    dynamicObj.OnHit(staticObj.getComponent())
-                }
-            });
-        });
+        if (this.targetObject == null)
+            return;
+
+        if (this.freeCamera)
+            return;
+
+        var followSpeed = 5.0;
+        var distanceMax = 360.0;
+        var distanceMin = 360.0;
+        var height = 120;
+        var closeEnoughLimit = 10.0;
+        var maxTargetMovement = 1;
+
+        //how many frames has the target been moving at fullspeed
+        var maxFullSpeedCount = 5;
+
+        var heightVector = new THREE.Vector3(0, height, 0);
+        var targetOffset = new THREE.Vector3(0, 100, 0);
+
+        var targetPos = this.targetObject.getWorldPosition();
+        targetPos.add(targetOffset);
+
+        var targetDirection = this.targetObject.getWorldDirection();
+        var idealCamPos = targetDirection.multiplyScalar(-distanceMin)
+            .add(targetPos)
+            .add(heightVector);
+
+        var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
+        var speed = followSpeed;
+        velocity.normalize();
+        velocity.multiplyScalar(followSpeed);
+        var newPos = new THREE.Vector3().addVectors(this.position, velocity);
+        var currentDist = newPos.distanceTo(idealCamPos);
+
+        //is the target moving a lot?
+        var targetMovementChange = this.targetObject.getWorldPosition().distanceTo(this.lastTargetPos);
+        if (targetMovementChange > maxTargetMovement) {
+            this.fullSpeedCount++;
+        }
+        else {
+            this.fullSpeedCount = 0;
+        }
+
+        //If the target is moving at full speed for a while 
+        //don't animate just lock on to the target
+        if (this.fullSpeedCount > maxFullSpeedCount && this.closeEnough) {
+            var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+            var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+            var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+            look = look.subVectors(this.position, targetPos);
+            look.normalize();
+            right.crossVectors(up, look);
+            right.normalize();
+            up.crossVectors(look, right);
+            up.normalize();
+
+            this.lookatForCamera(right, up, look, idealCamPos);
+
+            //not moving at full speed animate the camera
+        } else if (currentDist > closeEnoughLimit) {
+
+            var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+            var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+            var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+            look = look.subVectors(this.position, targetPos);
+            look.normalize();
+            right.crossVectors(up, look);
+            right.normalize();
+            up.crossVectors(look, right);
+            up.normalize();
+
+            this.lookatForCamera(right, up, look, newPos);
+            this.closeEnough = false;
+
+        } else {
+            this.closeEnough = true;
+        }
+
+        this.lastTargetPos = this.targetObject.getWorldPosition();
+
+    }
+
+    public windowResize(width: number, height: number): void {
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+    }
+
+    private updateCamera(): void {
+
+        if (this.angle.x > this.TwoPi)
+            this.angle.x += -this.TwoPi;
+
+        if (this.angle.x < -this.TwoPi)
+            this.angle.x += this.TwoPi;
+
+        if (this.angle.y > this.TwoPi)
+            this.angle.y += -this.TwoPi;
+
+        if (this.angle.y < -this.TwoPi)
+            this.angle.y += this.TwoPi;
+
+        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+        var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
+        var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+
+        look.applyAxisAngle(up, this.angle.x);
+        right.crossVectors(up, look);
+        right.normalize();
+
+        up = up.applyAxisAngle(right, this.angle.y);
+        up.normalize();
+
+        look.crossVectors(right, up);
+        look.normalize();
+
+        this.lookatForCamera(right, up, look, this.position);
     }
 
 }
 
-export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard 
-{
-  private _camera: THREE.PerspectiveCamera;
-  private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
-  private lastPosition: THREE.Vector2 = new THREE.Vector2(0, 0);
-  private readonly TwoPi: number = Math.PI * 2.0;
+export class HUD extends Component {
 
-  // Target following variables 
-  private targetObject: THREE.Object3D;
-  private lastTargetPos: THREE.Vector3;
-  private fullSpeedCount: number = 0;
-  private closeEnough: boolean = false;
-  private freeCamera = false;
-  
-  /**
-   * Set the target for the camera to follow.
-   * @param target 
-   */
-  public set target(target: THREE.Object3D) {
-    this.targetObject = target;
-    this.lastTargetPos = this.targetObject.getWorldPosition();
-  }
-
-  /**
-   * Gets the target
-   */
-  public get target(): THREE.Object3D {
-    return this.targetObject;
-  }
-
-  public get camera(): THREE.PerspectiveCamera {
-    return this._camera;
-  }
-  /**
-   * Scale the camera's rotation speed
-   */
-  public angleScale: number = .005;
-
-  /**
-   * Scale the camera's movement speed
-   */
-  public moveScale: number = 5;
-
-  /**
-   * The camera's position
-   */
-  public position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
-
-  public constructor(e: IEnvironment, camera: THREE.PerspectiveCamera) {
-    super(e, "FlyCamera");
-    this._camera = camera;
-    this.updateCamera();
-
-    //register events
-    this.e.registionWindowResize(this);    
-    this.e.registerMouse(this);
-    this.e.registerKeyboard(this);
-  }
-
-  debug(): void {
-
-    var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-    var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-    var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-
-    this.camera.matrix.extractBasis(right, up, look);
-    var te = this.camera.matrix.elements;
-    var position = new THREE.Vector3(te[12], te[13], te[14]);
-
-    console.log("right: " + right.x + ", " + right.y + ", " + right.z);
-    console.log("up: " + up.x + ", " + up.y + ", " + up.z);
-    console.log("look: " + look.x + ", " + look.y + ", " + look.z);
-    console.log("position: " + position.x + ", " + position.y + ", " + position.z);
-  }
-
-  private lookatForCamera(xAxis: THREE.Vector3, yAxis: THREE.Vector3, zAxis: THREE.Vector3, eye: THREE.Vector3): void {
-    this.position = eye;
-    this.camera.matrix.makeBasis(xAxis, yAxis, zAxis);
-    this.camera.matrix.setPosition(eye);
-    this.camera.matrixAutoUpdate = false;
-    this.camera.updateMatrixWorld(true);
-  }
-
-  initialize() { /*nop*/ }
-  start() { /*nop*/ }
-
-  mouseOver(mouse: MouseEvent): void {
-    this.lastPosition.x = mouse.x;
-    this.lastPosition.y = mouse.y;
-  }
-
-  /**
-   * Move the camera using the mouse. While the left button is 
-   * down the camera is in free mode and can use the wasd keys.
-   * It will not return out of free mode until 'q' is hit
-   * 
-   * @param mouse 
-   */
-  mouseMove(mouse: MouseEvent): void {
-    
-    if (mouse.buttons === 1) {
-      var deltaX = -(mouse.x - this.lastPosition.x) * this.angleScale;
-      var deltaY = -(mouse.y - this.lastPosition.y) * this.angleScale;
-
-      this.angle.x += deltaX;
-      this.angle.y += deltaY;
-
-      this.freeCamera = true;
-
-      this.updateCamera();
-    }    
-
-    this.lastPosition.x = mouse.x;
-    this.lastPosition.y = mouse.y;
-
-  }
-
-  keyDown(key: KeyboardEvent): void {
-    var direction: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-
-    switch (key.keyCode) {
-      case 87: //W       
-        direction.add(new THREE.Vector3(0, 0, -1));
-        break;
-      case 65: //A
-        direction.add(new THREE.Vector3(-1, 0, 0));
-        break;
-      case 68: //D
-        direction.add(new THREE.Vector3(1, 0, 0));
-        break;
-      case 83: //S
-        direction.add(new THREE.Vector3(0, 0, 1));
-        break;
-      case 69: //E
-        direction.add(new THREE.Vector3(0, 1, 0));
-        break;
-      case 88: //X
-        direction.add(new THREE.Vector3(0, -1, 0));
-        break;
-      case 81: //Q
-        this.freeCamera = false;
-        break;      
+    public get obj(): THREE.Object3D {
+        throw new Error("No Object3D in this class.");
     }
-
-    if (direction.length() > 0) {
-      direction.multiplyScalar(this.moveScale);
-      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-      var right: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-      var up: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-
-      this.camera.matrix.extractBasis(right, up, look);
-
-      look.multiplyScalar(direction.z);
-      up.multiplyScalar(direction.y);
-      right.multiplyScalar(direction.x);
-
-      this.position.add(right).add(up).add(look);
-
-      this.updateCamera();
-    }
-  }
-
-  keyUp(key: KeyboardEvent): void {
-   //NOP
-  }
-
-  update(delta: number) {
-    if (this.targetObject == null)
-        return;
-
-    if (this.freeCamera)
-      return;
-
-    var followSpeed = 5.0;
-    var distanceMax = 360.0;
-    var distanceMin = 360.0;
-    var height = 120;
-    var closeEnoughLimit = 10.0;
-    var maxTargetMovement = 1;
-
-    //how many frames has the target been moving at fullspeed
-    var maxFullSpeedCount = 5;
-
-    var heightVector = new THREE.Vector3(0, height, 0);
-    var targetOffset = new THREE.Vector3(0, 100, 0);
-
-    var targetPos = this.targetObject.getWorldPosition();
-    targetPos.add(targetOffset);
-
-    var targetDirection = this.targetObject.getWorldDirection();
-    var idealCamPos = targetDirection.multiplyScalar(-distanceMin)
-      .add(targetPos)
-      .add(heightVector);
-
-    var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
-    var speed = followSpeed;
-    velocity.normalize();
-    velocity.multiplyScalar(followSpeed);
-    var newPos = new THREE.Vector3().addVectors(this.position, velocity);
-    var currentDist = newPos.distanceTo(idealCamPos);
-
-    //is the target moving a lot?
-    var targetMovementChange = this.targetObject.getWorldPosition().distanceTo(this.lastTargetPos);
-    if (targetMovementChange > maxTargetMovement) {
-      this.fullSpeedCount++;
-    }
-    else {
-      this.fullSpeedCount = 0;
-    }
-
-    //If the target is moving at full speed for a while 
-    //don't animate just lock on to the target
-    if (this.fullSpeedCount > maxFullSpeedCount && this.closeEnough) {
-      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
-      var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-      var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-
-      look = look.subVectors(this.position, targetPos);
-      look.normalize();
-      right.crossVectors(up, look);
-      right.normalize();
-      up.crossVectors(look, right);
-      up.normalize();
-
-      this.lookatForCamera(right, up, look, idealCamPos);
-
-      //not moving at full speed animate the camera
-    } else if (currentDist > closeEnoughLimit) {
-
-      var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
-      var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-      var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-
-      look = look.subVectors(this.position, targetPos);
-      look.normalize();
-      right.crossVectors(up, look);
-      right.normalize();
-      up.crossVectors(look, right);
-      up.normalize();
-
-      this.lookatForCamera(right, up, look, newPos);
-      this.closeEnough = false;
-
-    } else {
-      this.closeEnough = true;
-    }
-
-    this.lastTargetPos = this.targetObject.getWorldPosition();
-
-  }
-
-  public windowResize(width: number, height: number): void {
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-  }  
-
-  private updateCamera(): void {
-
-    if (this.angle.x > this.TwoPi)
-      this.angle.x += -this.TwoPi;
-
-    if (this.angle.x < -this.TwoPi)
-      this.angle.x += this.TwoPi;
-
-    if (this.angle.y > this.TwoPi)
-      this.angle.y += -this.TwoPi;
-
-    if (this.angle.y < -this.TwoPi)
-      this.angle.y += this.TwoPi;
-
-    var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
-    var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-    var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
-
-    look.applyAxisAngle(up, this.angle.x);
-    right.crossVectors(up, look);
-    right.normalize();
-
-    up = up.applyAxisAngle(right, this.angle.y);
-    up.normalize();
-
-    look.crossVectors(right, up);
-    look.normalize();
-
-    this.lookatForCamera(right, up, look, this.position);
-  }
-
-}
-
-export class HUD extends Component{
-     
 }
 
 /**
@@ -768,11 +830,14 @@ export class HUD extends Component{
  */
 export class Assets extends Component {
 
-    public models: Map<string, DATA.Model> = new Map<string, DATA.Model>();    
+    public models: Map<string, DATA.Model> = new Map<string, DATA.Model>();
 
-    public constructor(e: Environment)
-    {
+    public constructor(e: Environment) {
         super(e, "AssetManager");
+    }
+
+    public get obj(): THREE.Object3D {
+        throw new Error("No Object3D in this class.");
     }
 
     public loadModelJson(pathToJson: string, onLoad?, onProgress?, onError?): void {
@@ -799,45 +864,42 @@ export class Assets extends Component {
  */
 export class PowerUpManager extends Component {
 
-    private _items: PowerUp[] = [];  
+    private _items: PowerUp[] = [];
 
     public get items() {
         return this._items;
     }
 
-    public constructor(e: IEnvironment)
-    {
-        super(e, "PowerUpManager");        
+    public constructor(e: IEnvironment) {
+        super(e, "PowerUpManager");
+    }
+
+    public get obj(): THREE.Object3D {
+        throw new Error("No Object3D in this class.");
     }
 
     public initialize() {
         //create 10 items
         for (var i = 0; i < 100; i++) {
-            this._items.push(new PowerUp(this.e, "PowerUp"+ i ));
+            this._items.push(new PowerUp(this.e, "PowerUp" + i));
         }
     }
 
-    public start() {                
-        this._items.forEach((value, index, array) => {        
+    public start() {
+        this._items.forEach((value, index, array) => {
             value.Positiion.x = (G.random.next() * 5000) - 2000;
             value.Positiion.z = (G.random.next() * 5000) - 2000;
-        });        
+        });
     }
 
     public update(delta: number): void {
-        
-    }   
-    public windowResize(width: number, height: number) {/*nop*/ }
-
-    public characterMove(character: Character) {
         var hitItems = [];
         this._items.forEach((value, index, array) => {
-            value.characterMove(character);
             if (value.hit) {
                 hitItems.push(index);
 
                 //remove from scene                
-                value.destroy();
+                this.e.removeComponent(value.name);
             }
 
         });
@@ -847,68 +909,73 @@ export class PowerUpManager extends Component {
             this._items.slice(element, 1);
         });
     }
+    public windowResize(width: number, height: number) {/*nop*/ }
+
+    public characterMove(character: Character) {
+
+    }
 }
 /**
  * This is a power up a character can collect.
  */
-export class PowerUp extends Component3D {
+export class PowerUp extends Component3D implements ICollidable {
 
     private _model: G.Model;
     private _bBox;
     private _collisionHelper: THREE.BoxHelper;
     private _hit: boolean = false;
-    private _scene;
-    private _position : Vector3;
+    private _position: Vector3;
 
-    public constructor(e: IEnvironment, name: String){
-        super(e, name);        
-        this._position = new Vector3(0,0,0);
-    }       
+    public constructor(e: IEnvironment, name: string) {
+        super(e, name);
+        this._position = new Vector3(0, 0, 0);
+    }
 
-    public get Positiion(): Vector3
-    {        
+    public get Positiion(): Vector3 {
         return this._position;
     }
 
     public get hit() {
         return this._hit;
-    }   
+    }
 
     public initialize() {
         this._model = new G.Model();
-     }
+    }
 
-    public start() {        
-        
+    public start() {
+
         var model: DATA.Model = this.e.getAssets().models.get("powerup");
         this._model.Initialize(model);
+        this.e.registerCollidable(this);
 
         var action: THREE.AnimationAction = this._model.getActionFromClip("idle");
         action.setEffectiveTimeScale(0.4);
         action.startAt(G.random.next());
-        action.loop = true;                   
+        action.loop = true;
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
 
         this._collisionHelper = new THREE.BoxHelper(this._model);
-        //this._scene.add(this._collisionHelper);
+
         this._bBox = new THREE.Box3();
-        this._bBox.expandByObject(this._model); 
         this.obj.add(this._model);
-        this.obj.add(this._collisionHelper);   
-        
+        this.obj.add(this._collisionHelper);
+
         this.e.getScene().add(this.obj);
+
+        this._bBox.expandByObject(this._model);
     }
 
-    public update(delta: number) {      
-        
+    public update(delta: number) {
+
         // Set the position in case it changed
-        this._model.position.set(this._position.x, this._position.y, this._position.z);  
-
+        this._model.position.set(this._position.x, this._position.y, this._position.z);
         this._model.update(delta);
-        
+
+        this._collisionHelper.update();
     }
-        
+
     public characterMove(character: Character) {
         this._collisionHelper.update();
         this._bBox.makeEmpty();
@@ -918,10 +985,22 @@ export class PowerUp extends Component3D {
         }
     }
 
-    public destroy() {
-        this._scene.remove(this._collisionHelper);
-        this.e.getScene().remove(this._model);  
+    OnHit(other: Component3D) {
+        this._hit = true;
     }
+    getBBox(): THREE.Box3 {
+        this._bBox.makeEmpty();
+        this._bBox.expandByObject(this._model);
+        return this._bBox;
+    }
+    getComponent(): Component3D {
+        return this;
+    }
+
+    public destroy() {
+        this.e.getScene().remove(this.obj);
+    }
+
 }
 
 /**
@@ -929,7 +1008,7 @@ export class PowerUp extends Component3D {
  * It will recive inputs from the scene and manipulate the character graphics
  */
 export class Character extends Component3D implements IInputKeyboard, ICollidable {
-   
+
     private _model: G.Model;
     private walkAction: THREE.AnimationAction;
     private attackAction: THREE.AnimationAction;
@@ -939,7 +1018,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     private rotateSpeed: number = .05;
     private attackReady: boolean = false;
     private attacking: boolean = false;
-    private _box: THREE.Box3;    
+    private _box: THREE.Box3;
     private _collisionHelper: THREE.BoxHelper;
 
     public get model() {
@@ -947,12 +1026,11 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     }
     public get bBox(): THREE.Box3 {
         return this._box;
-    }    
+    }
 
-    public constructor(e: IEnvironment)
-    {
+    public constructor(e: IEnvironment) {
         super(e, "Character");
-        this.e.registerKeyboard(this);        
+        this.e.registerKeyboard(this);
     }
 
     ////////////////////////////////////////
@@ -961,10 +1039,10 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     public initialize() {
         this._model = new G.Model();
         this._box = new THREE.Box3();
-
+        this.e.registerCollidable(this);
     }
 
-    public start() {        
+    public start() {
         var model: DATA.Model = this.e.getAssets().models.get("character");
         this.model.Initialize(model);
 
@@ -976,7 +1054,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
         action.play();
 
         this._collisionHelper = new THREE.BoxHelper(this.model);
-        
+
         this.obj.add(this.model);
         this.obj.add(this._collisionHelper);
 
@@ -1027,7 +1105,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
                 this.moveSpeed = 0.0;
                 break;
         }
-    }   
+    }
 
     ////////////////////////////////////////
     //   Collision function
@@ -1036,12 +1114,14 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
         console.info("Hit: " + other.name)
     }
     getBBox(): THREE.Box3 {
+        this._box.makeEmpty();
+        this._box.expandByObject(this._model);
         return this._box;
     }
     getComponent(): Component3D {
         return this;
     }
-        
+
 
     ////////////////////////////////////////
     //   private functions
@@ -1093,7 +1173,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
             this._box.makeEmpty();
             this._box.expandByObject(this.model);
             this._collisionHelper.update();
-            //this.environment.onCharacterMove();
+            this.e.getCollisionManager().EnqueueDirty(this);
         }
     }
 
@@ -1121,15 +1201,14 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
  * This will render the skybox for the environment. This class will expect
  * an asset called environment.png to exists
  */
-export class Skybox extends Component3D  {
+export class Skybox extends Component3D {
     private target: THREE.Object3D;
 
-    public constructor(e : IEnvironment)
-    {
-        super(e, "SkyBox");        
+    public constructor(e: IEnvironment) {
+        super(e, "SkyBox");
     }
 
-    public setTarget(target:  THREE.Object3D) {
+    public setTarget(target: THREE.Object3D) {
         this.target = target;
     }
 
@@ -1164,11 +1243,13 @@ export class Skybox extends Component3D  {
         this.obj.add(mesh);
 
         this.e.getScene().add(this.obj);
+
+        this.setTarget(this.e.getCharacter().model);
     }
 
     update(delta: number): void {
         //move the box around the character
         var pos = this.target.position;
         this.obj.position.set(pos.x, pos.y, pos.z);
-    }    
+    }
 }

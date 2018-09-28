@@ -237,14 +237,14 @@
             "duration": 1.0,
             "tracks":  [
                 {                    
-                    "name": "rarm.quaternion",
+                    "name": "rarm.rotX",
                     "times": [0.0, 0.5, 1.0],
                     "interpolation": "InterpolateLinear",
                     "values": [
-                        0, 0, 0, 1,
-                        -0.7071067811865476, 0, 0, 0.7071067811865476,
-                        0, 0, 0, 1
-                    ]                
+                        0,
+                        -45,
+                        0
+                      ]                
                 },
                 {                    
                     "name": "rarm.position",

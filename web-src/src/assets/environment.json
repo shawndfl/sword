@@ -1,9 +1,9 @@
 {
    "seed": 123456,
    "terrain": { 
-        "rows" : 50,
-        "columns" : 50,
-        "scale": 100,
+        "rows" : 125,
+        "columns" : 125,        
+        "cellSize": 120,
         "texture1": "assets/environment.png"
    }
 }

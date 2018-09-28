@@ -341,39 +341,24 @@ export class Environment implements IEnvironment {
 
         this.collision = new CollisionManager(this);
 
-        // Setup the camera here so we can render something the first frame.
-        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-        this.flyCamera = new CameraComponent(this, camera);
-
-        this.loadLevelJson(this.scene, "../assets/environment.json");
+        // Setup the camera here so we can render something the first frame.        
+        this.flyCamera = new CameraComponent(this);
 
         this.assets = new Assets(this);
-        this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
-            this.assetsLoaded = true;
-        });
-    }
-
-    /**
-      * Loads the meshes, animations, and textures from a json file then adds the meshes to the THREE scene    
-      */
-    public loadLevelJson(scene: THREE.Scene, pathToJson: string): void {
-        var loader = new THREE.FileLoader();
-
-        // Cannot use json because the onLoad method expects a string 
-        // and making this json will return an object.
-        loader.setResponseType('text');
-        loader.load(pathToJson, (json) => {
-            var levelData: DATA.Level = JSON.parse(json);
-
+        this.assets.loadLevelJson("../assets/environment.json", (assets: Assets) => {
             // set the random seed for everything
-            G.random.start(levelData.seed);
+            G.random.start(this.assets.level.seed);
 
             this.terrain = new G.Terrain();
-            this.terrain.buildFromData(levelData.terrain);
-            scene.add(this.terrain);
+            this.terrain.buildFromData(this.assets.level.terrain);
+            this.scene.add(this.terrain);
 
             //we are done loading the level
             this.levelLoaded = true;
+        });
+
+        this.assets.loadModelJson("../assets/models.json", (assets: Assets) => {
+            this.assetsLoaded = true;
         });
     }
 
@@ -533,6 +518,12 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
     private closeEnough: boolean = false;
     private freeCamera = false;
     private targetOffset = new THREE.Vector3(0, 100, 0);
+    private followSpeed = 5.0;
+    private distanceMax = 360.0;
+    private distanceMin = 360.0;
+    private height = 120;
+    private closeEnoughLimit = 10.0;
+    private maxTargetMovement = 1;
 
     /**
      * Set the target for the camera to follow.
@@ -572,9 +563,9 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
      */
     public position: THREE.Vector3 = new THREE.Vector3(0, 100, 200);
 
-    public constructor(e: IEnvironment, camera: THREE.PerspectiveCamera) {
+    public constructor(e: IEnvironment) {
         super(e, "FlyCamera");
-        this._camera = camera;
+        this._camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100000);
         this.updateCamera();
 
         //register events
@@ -611,6 +602,7 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
 
     start() {
         this.target = this.e.getComponent("Character").obj;
+        this.position =  this.target.getWorldPosition();
     }
 
     mouseOver(mouse: MouseEvent): void {
@@ -700,36 +692,31 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         if (this.freeCamera)
             return;
 
-        var followSpeed = 5.0;
-        var distanceMax = 360.0;
-        var distanceMin = 360.0;
-        var height = 120;
-        var closeEnoughLimit = 10.0;
-        var maxTargetMovement = 1;
+    
 
         //how many frames has the target been moving at fullspeed
         var maxFullSpeedCount = 5;
 
-        var heightVector = new THREE.Vector3(0, height, 0);       
+        var heightVector = new THREE.Vector3(0, this.height, 0);
 
         var targetPos = this.targetObject.getWorldPosition();
         targetPos.add(this.targetOffset);
 
         var targetDirection = this.targetObject.getWorldDirection();
-        var idealCamPos = targetDirection.multiplyScalar(-distanceMin)
+        var idealCamPos = targetDirection.multiplyScalar(-this.distanceMin)
             .add(targetPos)
             .add(heightVector);
 
         var velocity = new THREE.Vector3().subVectors(idealCamPos, this.position);
-        var speed = followSpeed;
+        var speed = this.followSpeed;
         velocity.normalize();
-        velocity.multiplyScalar(followSpeed);
+        velocity.multiplyScalar(this.followSpeed);
         var newPos = new THREE.Vector3().addVectors(this.position, velocity);
         var currentDist = newPos.distanceTo(idealCamPos);
 
         //is the target moving a lot?
         var targetMovementChange = this.targetObject.getWorldPosition().distanceTo(this.lastTargetPos);
-        if (targetMovementChange > maxTargetMovement) {
+        if (targetMovementChange > this.maxTargetMovement) {
             this.fullSpeedCount++;
         }
         else {
@@ -753,7 +740,7 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
             this.lookatForCamera(right, up, look, idealCamPos);
 
             //not moving at full speed animate the camera
-        } else if (currentDist > closeEnoughLimit) {
+        } else if (currentDist > this.closeEnoughLimit) {
 
             var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
             var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
@@ -796,13 +783,13 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         if (this.angle.y < -this.TwoPi)
             this.angle.y += this.TwoPi;
 
-        var look: THREE.Vector3 =  new THREE.Vector3(0, 0, 1);
+        var look: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
         if (this.targetObject) {
             var targetPos = this.targetObject.getWorldPosition();
             targetPos.add(this.targetOffset);
             look = look.subVectors(this.position, targetPos);
             look.normalize();
-        }        
+        }
 
         var right: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
         var up: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
@@ -852,7 +839,37 @@ export class HUD extends Component {
  */
 export class Assets extends Component {
 
-    public models: Map<string, DATA.Model> = new Map<string, DATA.Model>();
+    private _models: Map<string, DATA.Model> = new Map<string, DATA.Model>();
+    private _levelData: DATA.Level;
+    private _modelsLoaded: boolean = false;
+    private _levelLoaded: boolean = false;
+
+
+    /**
+     * If the assets are ready to be used.
+     */
+    public get ready(): boolean {
+        return this._modelsLoaded && this._levelLoaded;
+    }
+
+    /**
+     * Gets the models
+     */
+    public get models(): Map<string, DATA.Model> {
+        if (this._modelsLoaded)
+            return this._models;
+        else
+            return null;
+    }
+    /**
+     * Gets the level data. 
+     */
+    public get level(): DATA.Level {
+        if (this._levelLoaded)
+            return this._levelData;
+        else
+            return null;
+    }
 
     public constructor(e: Environment) {
         super(e, "AssetManager");
@@ -862,6 +879,29 @@ export class Assets extends Component {
         throw new Error("No Object3D in this class.");
     }
 
+    /**
+      * Loads the meshes, animations, and textures from a json file then adds the meshes to the THREE scene    
+      */
+    public loadLevelJson(pathToJson: string, onLoad?, onProgress?, onError?): void {
+        var loader = new THREE.FileLoader();
+
+        // Cannot use json because the onLoad method expects a string 
+        // and making this json will return an object.
+        loader.setResponseType('text');
+        loader.load(pathToJson, (json) => {
+            this._levelData = JSON.parse(json);
+            this._levelLoaded = true;
+            onLoad(this);
+        });
+    }
+
+    /**
+     * Loads the models
+     * @param pathToJson 
+     * @param onLoad 
+     * @param onProgress 
+     * @param onError 
+     */
     public loadModelJson(pathToJson: string, onLoad?, onProgress?, onError?): void {
         var loader = new THREE.FileLoader();
 
@@ -870,12 +910,13 @@ export class Assets extends Component {
         loader.setResponseType('text');
         loader.load(pathToJson, (json) => {
             var models: DATA.Model[] = JSON.parse(json);
+            this._modelsLoaded = true;
 
             //store the models in a map
             models.forEach((value: DATA.Model, index: number, array: DATA.Model[]) => {
                 this.models.set(value.name, value);
             });
-
+            
             onLoad(this);
         }, onProgress, onError);
     }
@@ -1079,6 +1120,11 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
 
         this.obj.add(this.model);
         this.obj.add(this._collisionHelper);
+        
+        var worldXMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.rows;
+        var worldZMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.columns;
+        this.model.position.x = G.random.next(0, worldXMax);
+        this.model.position.z = G.random.next(0, worldZMax);
 
         this.e.getScene().add(this.obj);
     }

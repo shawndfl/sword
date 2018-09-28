@@ -62,8 +62,9 @@ export class Terrain extends THREE.Object3D {
         material.map = diffused;
 
         material.wireframe = false;
+        
         var terrainGeo = new TerrainGeometry().
-            setSize(terrain.scale, terrain.rows, terrain.columns).
+            setSize(terrain.cellSize, terrain.rows, terrain.columns).
             buildTerrain(); 
         var mesh = new THREE.Mesh(terrainGeo, material);
 
@@ -117,9 +118,9 @@ class TerrainGeometry extends THREE.BufferGeometry {
         var cellSize = this.cellSize;
 
         //Build the rows one quad at a time. 
-        for (var row = -rowCount; row < rowCount; row++) {
+        for (var row = 0; row < rowCount; row++) {
 
-            for (var col = -colCount; col < colCount; col++) {
+            for (var col = 0; col < colCount; col++) {
 
                 //calcuate verts
                 var x = cellSize * row;

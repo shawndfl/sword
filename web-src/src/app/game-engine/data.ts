@@ -55,7 +55,7 @@ export class Character {
 export class Terrain {
     rows : number;
     columns : number;
-    scale: number;
+    cellSize : number;
     texture1: string;
 }
 

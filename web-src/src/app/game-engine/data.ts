@@ -61,6 +61,7 @@ export class Terrain {
 
 export class Level {
     seed: number;
+    itemCount: number;
     terrain: Terrain;
     character: Character;
 }

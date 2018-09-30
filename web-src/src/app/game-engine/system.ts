@@ -212,6 +212,7 @@ export class Environment implements IEnvironment {
     private items: PowerUpManager;
     private skybox: Skybox;
     private collision: CollisionManager;
+    private cell: Cell;
 
     //DATA
     private levelData: DATA.Level;
@@ -335,6 +336,7 @@ export class Environment implements IEnvironment {
         var ambient = new THREE.AmbientLight(0x909090); // soft white light
         this.scene.add(ambient);
 
+        this.cell = new Cell(this, "Cell1");
         this.character = new Character(this);
         this.skybox = new Skybox(this);
         this.items = new PowerUpManager(this);
@@ -505,6 +507,61 @@ export class CollisionManager extends Component {
     }
 }
 
+export class Cell extends Component3D {
+
+    private _row;
+    private _col;
+    private _height;
+    private _isPositionSet: boolean = false;
+    private mesh: G.CubeMesh;
+
+    public start() {
+
+        var texturePath: string = "assets/environment.png"
+        // Set material        
+        var texture: THREE.Texture = new THREE.TextureLoader().load(texturePath);
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestMipMapNearestFilter;
+
+        var material = new THREE.MeshPhongMaterial();
+        material.color = new THREE.Color(1.0, 1.0, 1.0);
+
+        material.shininess = 100.0;
+        material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        material.transparent = true;
+        material.map = texture;
+        material.wireframe = false;
+
+        var geo: G.CubeGeometry = new G.CubeGeometry(
+            [0, 0, 0],
+            [2, 1],
+            [2, 1],
+            [2, 1],
+            [2, 1],
+            [2, 1],
+            [2, 1]
+        );
+
+        this.mesh = new G.CubeMesh(geo, material);
+        this.mesh.name = this.name;
+        this.mesh.position.set(60, 60, 60);
+        this.mesh.scale.set(120, 120, 120);
+
+        this.obj.add(this.mesh);
+        this.e.getScene().add(this.obj);
+    }
+
+    public update(delta: number) {
+        if (!this._isPositionSet) {
+            var charPos: THREE.Vector3 = this.e.getCharacter().model.position;
+            this.mesh.position.set(charPos.x + 60, charPos.y + 60, charPos.z + 60);
+            this._isPositionSet = true;
+        }
+    }
+}
+
 export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard {
     private _camera: THREE.PerspectiveCamera;
     private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
@@ -532,6 +589,7 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
     public set target(target: THREE.Object3D) {
         this.targetObject = target;
         this.lastTargetPos = this.targetObject.getWorldPosition();
+        this.position = this.target.getWorldPosition();
     }
 
     public get obj(): THREE.Object3D {
@@ -602,7 +660,6 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
 
     start() {
         this.target = this.e.getComponent("Character").obj;
-        this.position =  this.target.getWorldPosition();
     }
 
     mouseOver(mouse: MouseEvent): void {
@@ -692,7 +749,7 @@ export class CameraComponent extends Component implements ISystemResize, IInputM
         if (this.freeCamera)
             return;
 
-    
+
 
         //how many frames has the target been moving at fullspeed
         var maxFullSpeedCount = 5;
@@ -916,7 +973,7 @@ export class Assets extends Component {
             models.forEach((value: DATA.Model, index: number, array: DATA.Model[]) => {
                 this.models.set(value.name, value);
             });
-            
+
             onLoad(this);
         }, onProgress, onError);
     }
@@ -943,15 +1000,17 @@ export class PowerUpManager extends Component {
 
     public initialize() {
         //create 10 items
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < this.assets.level.itemCount; i++) {
             this._items.push(new PowerUp(this.e, "PowerUp" + i));
         }
     }
 
     public start() {
         this._items.forEach((value, index, array) => {
-            value.Positiion.x = (G.random.next() * 5000) - 2000;
-            value.Positiion.z = (G.random.next() * 5000) - 2000;
+            var maxX = this.assets.level.terrain.rows * this.assets.level.terrain.cellSize;
+            var maxZ = this.assets.level.terrain.columns * this.assets.level.terrain.cellSize;
+            value.Positiion.x = (G.random.next() * maxX);
+            value.Positiion.z = (G.random.next() * maxZ);
         });
     }
 
@@ -985,7 +1044,7 @@ export class PowerUp extends Component3D implements ICollidable {
 
     private _model: G.Model;
     private _bBox;
-    private _collisionHelper: THREE.BoxHelper;
+    //private _collisionHelper: THREE.BoxHelper;
     private _hit: boolean = false;
     private _position: Vector3;
 
@@ -1019,11 +1078,11 @@ export class PowerUp extends Component3D implements ICollidable {
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
 
-        this._collisionHelper = new THREE.BoxHelper(this._model);
+        //this._collisionHelper = new THREE.BoxHelper(this._model);
 
         this._bBox = new THREE.Box3();
         this.obj.add(this._model);
-        this.obj.add(this._collisionHelper);
+        //this.obj.add(this._collisionHelper);
 
         this.e.getScene().add(this.obj);
 
@@ -1036,11 +1095,11 @@ export class PowerUp extends Component3D implements ICollidable {
         this._model.position.set(this._position.x, this._position.y, this._position.z);
         this._model.update(delta);
 
-        this._collisionHelper.update();
+        //this._collisionHelper.update();
     }
 
     public characterMove(character: Character) {
-        this._collisionHelper.update();
+        //this._collisionHelper.update();
         this._bBox.makeEmpty();
         this._bBox.expandByObject(this._model);
         if (character.bBox.intersectsBox(this._bBox)) {
@@ -1082,7 +1141,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     private attackReady: boolean = false;
     private attacking: boolean = false;
     private _box: THREE.Box3;
-    private _collisionHelper: THREE.BoxHelper;
+    //private _collisionHelper: THREE.BoxHelper;
 
     public get model() {
         return this._model;
@@ -1116,11 +1175,11 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
 
-        this._collisionHelper = new THREE.BoxHelper(this.model);
+        //this._collisionHelper = new THREE.BoxHelper(this.model);
 
         this.obj.add(this.model);
-        this.obj.add(this._collisionHelper);
-        
+        //this.obj.add(this._collisionHelper);
+
         var worldXMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.rows;
         var worldZMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.columns;
         this.model.position.x = G.random.next(0, worldXMax);
@@ -1243,7 +1302,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
         if (positionDirty) {
             this._box.makeEmpty();
             this._box.expandByObject(this.model);
-            this._collisionHelper.update();
+            //this._collisionHelper.update();
             this.e.getCollisionManager().EnqueueDirty(this);
         }
     }

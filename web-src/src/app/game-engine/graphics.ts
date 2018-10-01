@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import * as DATA from './data';
-import { Environment } from './system';
 
 class Random
 {    
@@ -62,7 +61,7 @@ export class Terrain extends THREE.Object3D {
         material.map = diffused;
 
         material.wireframe = false;
-        
+
         var terrainGeo = new TerrainGeometry().
             setSize(terrain.cellSize, terrain.rows, terrain.columns).
             buildTerrain(); 

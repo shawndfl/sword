@@ -15,12 +15,25 @@ export enum ComponentState {
 }
 
 /**
+ * The type of a collidable object
+ * This is used for filtering.
+ */
+export enum CollsionType {
+    None = 0x00,
+    Character = 0x01,
+    Wall = 0x02,
+    Enemy = 0x04,
+    Item = 0x08,
+}
+
+/**
  * Interface for components that can collide with others
  */
 export interface ICollidable {
     OnHit(other: Component3D);
     getBBox(): THREE.Box3;
     getComponent(): Component3D;
+    getCollsionType(): CollsionType;
 }
 
 /**
@@ -193,6 +206,18 @@ export class Component3D extends Component {
     }
 }
 
+/**
+ * The results of hitting a bounding box
+ */
+export class HitResults {
+    public object: ICollidable;
+    // The vector to add to the center of 
+    // a bonding box to move it out of the
+    // target
+    public correction: THREE.Vector3;
+    public refectVector: THREE.Vector3;
+    public hit: boolean;
+}
 
 /**
  * Collision manager handles all collisions in the game.
@@ -202,16 +227,72 @@ export class Component3D extends Component {
 export class CollisionManager extends Component {
 
     private collidable: ICollidable[] = [];
-    private haveMoved: ICollidable[] = [];
 
     public registerCollidable(obj: ICollidable) {
         this.collidable.push(obj);
     }
 
-    public EnqueueDirty(obj: ICollidable) {
-        this.haveMoved.push(obj);
+    public checkHitRay(ray: THREE.Ray, collsiontype: CollsionType, results: HitResults): boolean {
+        results.object = null;
+        results.correction = new THREE.Vector3();
+        results.refectVector = new THREE.Vector3();
+        results.hit = false;
+
+        var end: THREE.Vector3 = new THREE.Vector3();
+        end.addVectors(ray.origin, ray.direction);
+
+        this.collidable.forEach(target => {
+            if ((collsiontype & target.getCollsionType()) > 0 && target.getBBox().containsPoint(end)) {
+                results.hit = true;
+                results.object = target;
+                //results.refectVector = ;
+                return;
+            }
+        });
+
+        return results.hit;
     }
 
+    public checkHitBox(box: THREE.Box3, collsiontype: CollsionType, results: HitResults): boolean {
+        results.object = null;
+        results.correction = new THREE.Vector3();
+        results.refectVector = new THREE.Vector3();
+        results.hit = false;
+
+        this.collidable.forEach(target => {
+
+            if ((collsiontype & target.getCollsionType()) > 0) {
+                if (target.getBBox().intersectsBox(box)) {
+                    var center = box.getCenter();
+                    var targetCenter = target.getBBox().getCenter();
+                    var tMax: THREE.Vector3 = target.getBBox().max.clone();
+                    var tMin: THREE.Vector3 = target.getBBox().min.clone();
+
+                    var t: THREE.Box3 = target.getBBox().clone();
+                    var x = center.x < targetCenter.x ? tMin.x - box.max.x : tMax.x - box.min.x;
+                    var y = center.y < targetCenter.y ? tMin.y - box.max.y : tMax.y - box.min.y;
+                    var z = center.z < targetCenter.z ? tMin.z - box.max.z : tMax.z - box.min.z;
+
+                    //pick the biggest component
+                    if (Math.abs(x) > Math.abs(y) && Math.abs(x) > Math.abs(z)) {
+                        results.correction.x = x;
+                    } if (Math.abs(y) > Math.abs(x) && Math.abs(y) > Math.abs(z)) {
+                        results.correction.y = y;
+                    } else {
+                        results.correction.z = z;
+                    }
+
+                    results.hit = true;
+                    results.object = target;
+                    //results.intesectPoint = ;
+                    //results.refectVector = ;
+                    return;
+                }
+            }
+        });
+
+        return results.hit;
+    }
     public constructor(e: IEnvironment) {
         super(e, "CollisionManager");
     }
@@ -227,76 +308,9 @@ export class CollisionManager extends Component {
         }
     }
     update(delta: number) {
-        // check everything that has moved
-        while (this.haveMoved.length > 0) {
-            var subject = this.haveMoved.pop();
-            // against everything else
-            this.collidable.forEach(target => {
-                if (target != subject) {
-                    if (target.getBBox().intersectsBox(subject.getBBox())) {
-                        subject.OnHit(target.getComponent());
-                        target.OnHit(subject.getComponent());
-                    }
-                }
-            });
-        }
     }
 }
 
-export class Cell extends Component3D {
-
-    private _row;
-    private _col;
-    private _height;
-    private _isPositionSet: boolean = false;
-    private mesh: G.CubeMesh;
-
-    public start() {
-
-        var texturePath: string = "assets/environment.png"
-        // Set material        
-        var texture: THREE.Texture = new THREE.TextureLoader().load(texturePath);
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestMipMapNearestFilter;
-
-        var material = new THREE.MeshPhongMaterial();
-        material.color = new THREE.Color(1.0, 1.0, 1.0);
-
-        material.shininess = 100.0;
-        material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = true;
-        material.map = texture;
-        material.wireframe = false;
-
-        var geo: G.CubeGeometry = new G.CubeGeometry(
-            [0, 0, 0],
-            [2, 1],
-            [2, 1],
-            [2, 1],
-            [2, 1],
-            [2, 1],
-            [2, 1]
-        );
-
-        this.mesh = new G.CubeMesh(geo, material);
-        this.mesh.name = this.name;
-        this.mesh.position.set(60, 60, 60);
-        this.mesh.scale.set(120, 120, 120);
-
-        this.obj.add(this.mesh);
-        this.e.getScene().add(this.obj);
-    }
-
-    public update(delta: number) {
-        if (!this._isPositionSet) {
-            var charPos: THREE.Vector3 = this.e.getCharacter().model.position;
-            this.mesh.position.set(charPos.x + 60, charPos.y + 60, charPos.z + 60);
-            this._isPositionSet = true;
-        }
-    }
-}
 
 export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard {
     private _camera: THREE.PerspectiveCamera;
@@ -797,6 +811,10 @@ export class PowerUp extends Component3D implements ICollidable {
         return this._hit;
     }
 
+    public getCollsionType(): CollsionType {
+        return CollsionType.Item;
+    }
+
     public initialize() {
         this._model = new G.Model();
     }
@@ -832,16 +850,7 @@ export class PowerUp extends Component3D implements ICollidable {
         this._model.update(delta);
 
         //this._collisionHelper.update();
-    }
-
-    public characterMove(character: Character) {
-        //this._collisionHelper.update();
-        this._bBox.makeEmpty();
-        this._bBox.expandByObject(this._model);
-        if (character.bBox.intersectsBox(this._bBox)) {
-            this._hit = true;
-        }
-    }
+    }    
 
     OnHit(other: Component3D) {
         this._hit = true;
@@ -889,6 +898,10 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     public constructor(e: IEnvironment) {
         super(e, "Character");
         this.e.registerKeyboard(this);
+    }
+
+    public getCollsionType(): CollsionType {
+        return CollsionType.Character;
     }
 
     ////////////////////////////////////////
@@ -975,8 +988,8 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     ////////////////////////////////////////
     OnHit(other: Component3D) {
         console.info("Hit: " + other.name);
-        this.model.material.color.g -= .05;
-        this.model.material.color.b -= .05;
+        //this.model.material.color.g -= .05;
+        //this.model.material.color.b -= .05;
 
     }
     getBBox(): THREE.Box3 {
@@ -1009,11 +1022,40 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
             var right: THREE.Vector3 = new THREE.Vector3();
             this.model.matrix.extractBasis(right, up, direction);
 
-            var current: THREE.Vector3 = this.model.position;
-            var newPos = current.addVectors(current, direction.multiplyScalar(this.moveSpeed));
-            this.model.position.set(newPos.x, newPos.y, newPos.z);
+            var current: THREE.Vector3 = this.model.position.clone();
+            var directionScaled: THREE.Vector3 = direction.clone().multiplyScalar(this.moveSpeed);
+            var newPos = current.addVectors(current, directionScaled);
+
+            // Check for collision             
+            var hit: HitResults = new HitResults();
+
+            // If we hit something
+            if (this.e.getCollisionManager().checkHitBox(this.getBBox(), CollsionType.Enemy | CollsionType.Item, hit)) {
+                hit.object.OnHit(this);
+            }
+
+            this._box.makeEmpty();
+            this._box.expandByObject(this._model);
+            
+            if (this.e.getCollisionManager().checkHitBox(this.getBBox(), CollsionType.Wall, hit)) {
+                var targetPosition: THREE.Vector3 = hit.object.getComponent().obj.getWorldPosition().clone();
+                var myPos: THREE.Vector3 = this.model.getWorldPosition().clone();
+                targetPosition.sub(myPos).normalize();
+
+                var dot: number = directionScaled.normalize().dot(targetPosition);
+                if (dot < 0) {
+                    this.model.position.set(newPos.x, newPos.y, newPos.z);
+                    positionDirty = true;
+                }
+                // TODO correct position                
+                //this.model.position.set(current.x, current.y, current.z);
+            }
+            else {
+                this.model.position.set(newPos.x, newPos.y, newPos.z);
+                positionDirty = true;
+            }
+
             this.walk();
-            positionDirty = true;
         }
 
         // attack
@@ -1038,8 +1080,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
         if (positionDirty) {
             this._box.makeEmpty();
             this._box.expandByObject(this.model);
-            //this._collisionHelper.update();
-            this.e.getCollisionManager().EnqueueDirty(this);
+            //this._collisionHelper.update();         
         }
     }
 

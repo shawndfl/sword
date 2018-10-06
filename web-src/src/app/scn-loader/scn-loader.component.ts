@@ -1,5 +1,4 @@
 import { Component, OnInit, HostListener } from '@angular/core';
-//import * as GAME from '../game-engine/system';
 import * as GAME from '../game-engine/level-creator';
 import * as THREE from 'three';
 

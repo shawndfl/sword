@@ -38,40 +38,6 @@ class Random
 export var random: Random = new Random();
 
 /**
- * The terrain class. Uses TerrainGeometry to build a terrain.
- */
-export class Terrain extends THREE.Object3D {    
-    
-    public buildFromData(terrain: DATA.Terrain) {        
-        this.name = "terrain";
-
-        // Set material
-        var textue = terrain.texture1;
-        var diffused = new THREE.TextureLoader().load(textue);
-        diffused.wrapS = THREE.RepeatWrapping;
-        diffused.wrapT = THREE.RepeatWrapping;
-        diffused.magFilter = THREE.NearestFilter;
-        diffused.minFilter = THREE.NearestMipMapNearestFilter;
-
-        var material = new THREE.MeshPhongMaterial();
-        material.color = new THREE.Color(1.0, 1.0, 1.0);
-        material.shininess = 100.0;
-        material.specular = new THREE.Color(1.0, 1.0, 1.0);
-        material.transparent = false;
-        material.map = diffused;
-
-        material.wireframe = false;
-
-        var terrainGeo = new TerrainGeometry().
-            setSize(terrain.cellSize, terrain.rows, terrain.columns).
-            buildTerrain(); 
-        var mesh = new THREE.Mesh(terrainGeo, material);
-
-        this.add(mesh);
-    }
-}
-
-/**
  * Calculates the uv coords for a face
  * @param x 0 based row
  * @param y 0 based col
@@ -93,7 +59,10 @@ function calculateUV(x: number, y: number): number[] {
     ]
 }
 
-class TerrainGeometry extends THREE.BufferGeometry {
+/**
+ * A class used to build a grid
+ */
+export class TerrainGeometry extends THREE.BufferGeometry {
 
     private cellSize: number = 10;
     private rows: number = 10;

@@ -311,7 +311,49 @@ export class CollisionManager extends Component {
     }
 }
 
+/**
+ * The terrain class. Uses TerrainGeometry to build a terrain.
+ */
+export class Terrain extends THREE.Object3D {    
+    
+    public buildFromData(terrain: DATA.Terrain) {        
+        this.name = "terrain";
 
+        // Set material
+        var textue = terrain.texture1;
+        var diffused = new THREE.TextureLoader().load(textue);
+        diffused.wrapS = THREE.RepeatWrapping;
+        diffused.wrapT = THREE.RepeatWrapping;
+        diffused.magFilter = THREE.NearestFilter;
+        diffused.minFilter = THREE.NearestMipMapNearestFilter;
+
+        var material = new THREE.MeshPhongMaterial();
+        material.color = new THREE.Color(1.0, 1.0, 1.0);
+        material.shininess = 100.0;
+        material.specular = new THREE.Color(1.0, 1.0, 1.0);
+        material.transparent = false;
+        material.map = diffused;
+
+        material.wireframe = false;
+
+        var terrainGeo = new G.TerrainGeometry().
+            setSize(terrain.cellSize, terrain.rows, terrain.columns).
+            buildTerrain(); 
+        var mesh = new THREE.Mesh(terrainGeo, material);
+
+        this.add(mesh);
+    }
+
+    private buildCubes(terrain: DATA.Terrain)
+    {
+        
+        terrain.cellSize;
+    }
+}
+
+/**
+ * The camera that follows the character
+ */
 export class CameraComponent extends Component implements ISystemResize, IInputMouse, IInputKeyboard {
     private _camera: THREE.PerspectiveCamera;
     private angle: THREE.Vector2 = new THREE.Vector2(0, 0);
@@ -886,6 +928,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     private attackReady: boolean = false;
     private attacking: boolean = false;
     private _box: THREE.Box3;
+    private _moveDebug : THREE.ArrowHelper;
     //private _collisionHelper: THREE.BoxHelper;
 
     public get model() {
@@ -909,7 +952,8 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
     ////////////////////////////////////////
     public initialize() {
         this._model = new G.Model();
-        this._box = new THREE.Box3();
+        this._box = new THREE.Box3();        
+
         this.e.registerCollidable(this);
     }
 
@@ -931,8 +975,8 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
 
         var worldXMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.rows;
         var worldZMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.columns;
-        this.model.position.x = G.random.next(0, worldXMax);
-        this.model.position.z = G.random.next(0, worldZMax);
+        //this.model.position.x = G.random.next(0, worldXMax);
+        //this.model.position.z = G.random.next(0, worldZMax);
 
         this.e.getScene().add(this.obj);
     }
@@ -1043,6 +1087,7 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
                 targetPosition.sub(myPos).normalize();
 
                 var dot: number = directionScaled.normalize().dot(targetPosition);
+                this._moveDebug = new THREE.ArrowHelper(targetPosition, directionScaled.normalize(), 50);
                 if (dot < 0) {
                     this.model.position.set(newPos.x, newPos.y, newPos.z);
                     positionDirty = true;
@@ -1081,6 +1126,204 @@ export class Character extends Component3D implements IInputKeyboard, ICollidabl
             this._box.makeEmpty();
             this._box.expandByObject(this.model);
             //this._collisionHelper.update();         
+        }
+    }
+
+    private walk() {
+        if (this.walkAction == undefined) {
+            this.walkAction = this.model.getActionFromClip("walk");
+            this.walkAction.setEffectiveTimeScale(2.5);
+            this.walkAction.loop = true;
+            this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+        }
+        if (!this.walkAction.isRunning()) {
+            this.walkAction.play();
+        }
+    }
+
+    private stop() {
+        if (this.walkAction != undefined && this.walkAction.isRunning) {
+            this.walkAction.stop();
+        }
+    }
+
+}
+
+/**
+ * This class will be used to hold all the logic for the main character.
+ * It will recive inputs from the scene and manipulate the character graphics
+ */
+export class Enemy extends Component3D implements ICollidable {
+
+    private _model: G.Model;
+    private walkAction: THREE.AnimationAction;
+    private attackAction: THREE.AnimationAction;
+    private rotateAngel: number = 0;
+    private moveSpeed: number = 0;
+    private speed: number = 5.0;
+    private rotateSpeed: number = .05;
+    private attackReady: boolean = false;
+    private attacking: boolean = false;
+    private _box: THREE.Box3;
+    private _moveDebug : THREE.ArrowHelper;
+    private _collisionHelper: THREE.BoxHelper;
+
+    public get model() {
+        return this._model;
+    }
+    public get bBox(): THREE.Box3 {
+        return this._box;
+    }
+
+    public constructor(e: IEnvironment) {
+        super(e, "Enemy");
+    }
+
+    public getCollsionType(): CollsionType {
+        return CollsionType.Character;
+    }
+
+    ////////////////////////////////////////
+    //   Life cycle events
+    ////////////////////////////////////////
+    public initialize() {
+        this._model = new G.Model();
+        this._box = new THREE.Box3();        
+
+        this.e.registerCollidable(this);
+        console.log("Creating Enemy");
+    }
+
+    public start() {
+        var model: DATA.Model = this.e.getAssets().models.get("enemy");
+        console.log("Loading: " + model.name);
+        this.model.Initialize(model);
+
+        //run blink animation
+        var action: THREE.AnimationAction = this.model.getActionFromClip('blink');
+        action.setEffectiveTimeScale(1.0);
+        action.loop = true;
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+
+        this._collisionHelper = new THREE.BoxHelper(this.model);
+
+        this.obj.add(this.model);
+        this.obj.add(this._collisionHelper);
+
+        var worldXMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.rows;
+        var worldZMax = this.assets.level.terrain.cellSize * this.assets.level.terrain.columns;
+        this.model.position.x = 0;//G.random.next(0, worldXMax);
+        this.model.position.z = 0;//G.random.next(0, worldZMax);
+
+        this.e.getScene().add(this.obj);
+    }
+
+    public update(delta: number) {
+        this.model.update(delta);
+        //console.log("Update Enemy");
+        this.move();
+    }
+
+    ////////////////////////////////////////
+    //   Collision function
+    ////////////////////////////////////////
+    OnHit(other: Component3D) {
+        console.info("Hit: " + other.name);
+        //this.model.material.color.g -= .05;
+        //this.model.material.color.b -= .05;
+
+    }
+    getBBox(): THREE.Box3 {
+        //this._box.makeEmpty();
+        //this._box.expandByObject(this._model);
+        return this._box;
+    }
+    getComponent(): Component3D {
+        return this;
+    }
+
+
+    ////////////////////////////////////////
+    //   private functions
+    ////////////////////////////////////////
+    private move() {
+        var positionDirty = false;
+        // rotate
+        if (this.rotateAngel != 0) {
+            var axis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
+            this.model.rotateOnAxis(axis, this.rotateAngel);
+            this.walk();
+            positionDirty = true;
+        }
+
+        // move
+        if (this.moveSpeed != 0) {
+            var direction: THREE.Vector3 = new THREE.Vector3();
+            var up: THREE.Vector3 = new THREE.Vector3();
+            var right: THREE.Vector3 = new THREE.Vector3();
+            this.model.matrix.extractBasis(right, up, direction);
+
+            var current: THREE.Vector3 = this.model.position.clone();
+            var directionScaled: THREE.Vector3 = direction.clone().multiplyScalar(this.moveSpeed);
+            var newPos = current.addVectors(current, directionScaled);
+
+            // Check for collision             
+            var hit: HitResults = new HitResults();
+
+            // If we hit something
+            if (this.e.getCollisionManager().checkHitBox(this.getBBox(), CollsionType.Enemy | CollsionType.Item, hit)) {
+                hit.object.OnHit(this);
+            }
+
+            this._box.makeEmpty();
+            this._box.expandByObject(this._model);
+            
+            if (this.e.getCollisionManager().checkHitBox(this.getBBox(), CollsionType.Wall, hit)) {
+                var targetPosition: THREE.Vector3 = hit.object.getComponent().obj.getWorldPosition().clone();
+                var myPos: THREE.Vector3 = this.model.getWorldPosition().clone();
+                targetPosition.sub(myPos).normalize();
+
+                var dot: number = directionScaled.normalize().dot(targetPosition);
+                this._moveDebug = new THREE.ArrowHelper(targetPosition, directionScaled.normalize(), 50);
+                if (dot < 0) {
+                    this.model.position.set(newPos.x, newPos.y, newPos.z);
+                    positionDirty = true;
+                }
+                // TODO correct position                
+                //this.model.position.set(current.x, current.y, current.z);
+            }
+            else {
+                this.model.position.set(newPos.x, newPos.y, newPos.z);
+                positionDirty = true;
+            }
+
+            this.walk();
+        }
+
+        // attack
+        if (this.attackReady && !this.attacking) {
+            this.attackAction = this.model.getActionFromClip("attack");
+            this.attackAction.setEffectiveTimeScale(3.5);
+            this.attackAction.loop = false;
+            this.attackAction.setLoop(THREE.LoopOnce, 1);
+            this.attackAction.reset();
+            this.attackAction.play();
+            this.attacking = true;
+            this.attackReady = false;
+            positionDirty = true;
+        }
+
+        // reset attack
+        if (this.attackAction != undefined && this.attacking && !this.attackAction.enabled) {
+            this.attacking = false;
+        }
+
+        // raise move event
+        if (positionDirty) {
+            this._box.makeEmpty();
+            this._box.expandByObject(this.model);
+            this._collisionHelper.update();         
         }
     }
 

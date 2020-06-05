@@ -1,0 +1,10 @@
+{
+   "seed": 123456,
+   "itemCount": 300,
+   "terrain": { 
+        "rows" : 125,
+        "columns" : 125,        
+        "cellSize": 120,
+        "texture1": "assets/environment.png"
+   }
+}

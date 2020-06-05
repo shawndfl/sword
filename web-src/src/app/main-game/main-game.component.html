@@ -1,0 +1,10 @@
+<div>
+  <label for="scene">Scene</label>
+  <select id="scene" [formControl]="scene">
+    <option value="none">none</option>     
+    <option value="loader">loader</option>
+  </select>
+  <ng-container *ngIf="selected =='loader'">
+    <app-scn-loader></app-scn-loader>
+  </ng-container>
+</div>
